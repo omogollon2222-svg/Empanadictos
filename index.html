@@ -1031,6 +1031,37 @@ async function makePdf(btn){
   }catch(e){toast("No se pudo generar el PDF. Revisa tu conexión e intenta de nuevo.",true)}
   btn.disabled=false;btn.textContent=old;
 }
+function lastBackupTxt(){let t=0;try{t=Number(localStorage.getItem("emp_lastbackup"))||0}catch(e){}
+  if(!t)return'<span class="lost">Nunca</span>';const d=Math.floor((Date.now()-t)/DAY);
+  const f=new Date(t).toLocaleDateString("es",{day:"numeric",month:"short",year:"numeric"});
+  return d>=7?`<span class="lost">${f} (hace ${d} días)</span>`:f}
+async function allDocs(col,local){
+  if(!db)return local;
+  const snap=await db.collection(col).get();return snap.docs.map(x=>({id:x.id,...x.data()}))}
+async function makeBackup(kind,btn){
+  btn.disabled=true;const old=btn.textContent;btn.textContent="Preparando…";
+  try{
+    const ventas=(await allDocs("ventas",sales)).sort((a,b)=>a.t-b.t);
+    const stamp=dkey(Date.now());
+    if(kind==="json"){
+      const [cu,tu,pe,ci]=await Promise.all([allDocs("cuentas",cuentas),allDocs("turnos",turnos),allDocs("perdidas",perdidas),db?allDocs("cierres",[]):Object.entries(cierres).map(([id,v])=>({id,...v}))]);
+      const data={app:"Empanadictos",version:1,fecha:new Date().toISOString(),config,inventario:inv,ventas,cuentas:cu,turnos:tu,perdidas:pe,cierres:ci};
+      await download(`empanadictos-respaldo-${stamp}.json`,JSON.stringify(data,null,1),"application/json");
+    }else{
+      const n=v=>String((Math.round((v||0)*100)/100).toFixed(2)).replace(".",",");
+      const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+      const rows=[["Fecha","Hora","Pedido","Productos","Empanadas","Bebidas","Total","Pago","Cajero","Cocinero","Estado"].join(";")];
+      ventas.forEach(v=>{const d=new Date(v.t);
+        rows.push([dkey(v.t),d.toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"}),v.num||"",
+          q(Object.entries(v.items||{}).map(([f,c])=>c+" "+P(f).name).join(", ")),empU(v),bebU(v),n(v.total),
+          q(v.pay||""),q(v.paidBy||v.cashier||""),q(v.cook||""),q(v.void?"anulado":v.paid===false?"por cobrar":(v.status||""))].join(";"))});
+      await download(`empanadictos-ventas-${stamp}.csv`,"\ufeff"+rows.join("\r\n"),"text/csv;charset=utf-8");
+    }
+    try{localStorage.setItem("emp_lastbackup",String(Date.now()))}catch(e){}
+    toast(`Respaldo listo: ${ventas.length} ventas`);if(tab==="ajustes")render();
+  }catch(e){toast("No se pudo crear el respaldo",true)}
+  btn.disabled=false;btn.textContent=old;
+}
 async function download(filename,content,mime){
   if(dl){try{await dl.save({filename,data:content});return}catch(e){if(e&&e.code==="declined")return;toast("No se pudo descargar",true);return}}
   try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type:mime}));a.download=filename;a.click()}catch(e){toast("La descarga no está disponible aquí",true)}
@@ -1092,6 +1123,8 @@ function renderAnalysis(){
 function renderSettings(){
   $("#app").innerHTML=`
     <h2>Ajustes</h2>
+    <div class="card"><h3>💾 Respaldo</h3><p class="sub" style="margin:0 0 10px">Guarda una copia de todas las ventas, cuentas, turnos, cierres e inventario. Hazlo al menos una vez por semana y guárdala en tu correo o en Drive.<br><b>Último respaldo en este dispositivo:</b> ${lastBackupTxt()}</p>
+      <div class="row2"><button class="btn primary" id="bkJson">Respaldo completo</button><button class="btn" id="bkCsv">Ventas para Excel</button></div></div>
     ${authUser?`<div class="card"><h3>🔒 Seguridad</h3><p class="sub" style="margin:0 0 10px">Este dispositivo está conectado como <b>${esc(authUser.email)}</b>. Si pierdes o cambias un dispositivo, cambia la contraseña en Firebase.</p><button class="btn danger" id="authOut">Cerrar sesión de este dispositivo</button></div>`:""}
     <div class="card"><h3>Precios y costos</h3><p class="sub" style="margin:0 0 6px">El costo sirve para calcular la ganancia estimada.</p>
       <div class="frow head"><span>Producto</span><span>Precio $</span><span>Costo $</span></div>
@@ -1159,6 +1192,8 @@ document.addEventListener("click",async ev=>{
   if(b.id==="closeModal"){closePreview();return}
   if(b.id==="pdf"){makePdf(b);return}
   if(b.id==="logout"){logout();return}
+  if(b.id==="bkJson"){makeBackup("json",b);return}
+  if(b.id==="bkCsv"){makeBackup("csv",b);return}
   if(b.id==="authEnter"){authLogin();return}
   if(b.id==="authReset"){authReset();return}
   if(b.id==="authOut"){if(await ask("¿Cerrar la sesión segura de este dispositivo? Tendrás que volver a escribir el correo y la contraseña.",{ok:"Cerrar sesión",danger:true})){if(shiftId)await endShift(shiftId);try{ssDel()}catch(e){}await firebase.auth().signOut()}return}
