@@ -11,6 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="firebase-config.js"></script>
 <title>Empanadictos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -376,6 +377,7 @@ let turnos=[], shiftId=null, demoShifts=null;
 let who=null, pendingRole=null, role=null, claves=null, clavesLoaded=false, loginRole="ventas", fails=0, lockUntil=0;
 let myCook=null; try{myCook=localStorage.getItem("emp_cook")}catch(e){}
 let db=null, dl=null, loaded=false, seenPending=null;
+let authNeeded=false, authUser=null, authBusy=false;
 
 /* ---------- Almacenamiento ---------- */
 function mergeCfg(c){c=c||{};return{prices:{...DEFAULT_CONFIG.prices,...(c.prices||{})},costs:{...DEFAULT_CONFIG.costs,...(c.costs||{})},goal:Number(c.goal)||DEFAULT_CONFIG.goal,cooks:Array.isArray(c.cooks)&&c.cooks.length?c.cooks:DEFAULT_CONFIG.cooks,staff:Array.isArray(c.staff)&&c.staff.length?c.staff:DEFAULT_CONFIG.staff,target:Number(c.target)||DEFAULT_CONFIG.target,stockMax:Number(c.stockMax)||50}}
@@ -391,15 +393,28 @@ window.addEventListener("storage",e=>{if(db||e.key!==LS)return;const pend=seenPe
     if(window.claude&&window.claude.use){
       const [cd,dd]=await Promise.all([window.claude.use("db"),window.claude.use("downloads")]);
       d=cd; dl=dd;
+    }else if(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey&&!window.firebase){
+      /* Hay nube configurada pero no cargó: no trabajar en modo local para no separar datos */
+      $("#app").innerHTML=`<div class="empty"><div class="big">📡</div><p><b>Sin conexión con la nube.</b><br>Revisa el internet y vuelve a intentar.</p><button class="btn primary" onclick="location.reload()">Reintentar</button></div>`;
+      $("#sync").textContent="Sin conexión";return;
     }else if(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey&&window.firebase){
       /* Versión GitHub Pages: sincroniza caja y cocina con Firebase Firestore */
       if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
+      /* Seguridad: nadie ve ni cambia datos sin iniciar sesión */
+      authNeeded=true; clavesLoaded=true; $("#sync").textContent="🔒 Protegido"; render();
+      await new Promise(res=>{let first=true;firebase.auth().onAuthStateChanged(u=>{
+        authUser=u;
+        if(u){if(first){first=false;res(u)}}
+        else if(!first){location.reload()}
+        else{render()}
+      })});
+      clavesLoaded=false; claves=null; render();
       d=firebase.firestore();
     }
     if(!d){clavesLoaded=true;restoreSession();render();return}
     db=d; sales=[]; cierres={}; claves=null; turnos=[]; cuentas=[]; perdidas=[];
     db.doc("tienda/claves").onSnapshot(s=>{claves=s.exists?s.data():null;clavesLoaded=true;restoreSession();render()},()=>{clavesLoaded=true;render()});
-    $("#sync").textContent="Guardado en la nube";
+    $("#sync").textContent=authUser?"🔒 "+authUser.email:"Guardado en la nube";
     db.collection("ventas").orderBy("t","desc").limit(1000).onSnapshot(snap=>{
       sales=snap.docs.map(x=>({id:x.id,...x.data()}));
       notifyNew(); loaded=true; render();
@@ -443,6 +458,29 @@ function staffRol(n){return (config.staff.find(x=>x.name===n)||{}).rol==="admin"
 function logout(){if(shiftId){endShift(shiftId);toast("Turno cerrado")}shiftId=null;role=null;who=null;pendingRole=null;cart={};try{ssDel()}catch(e){}render();window.scrollTo(0,0)}
 async function saveClaves(c){claves=c;if(db)await db.doc("tienda/claves").set(c);else saveLocal()}
 
+function renderAuth(){
+  if($("#aemail"))return;
+  $("#app").innerHTML=`<div class="login"><h2>🔒 Inicia sesión</h2>
+    <p class="sub">Por seguridad, cada dispositivo del local entra una sola vez con la cuenta del negocio.</p>
+    <div class="card"><label class="f" for="aemail">Correo</label><input class="inp" id="aemail" type="email" autocomplete="username" inputmode="email">
+    <label class="f" for="apass" style="margin-top:12px">Contraseña</label><input class="inp" id="apass" type="password" autocomplete="current-password">
+    <div class="err" id="aerr"></div><button class="btn primary" style="width:100%" id="authEnter">Entrar</button>
+    <button class="btn" style="width:100%;margin-top:10px" id="authReset">Olvidé mi contraseña</button></div></div>`;
+  setTimeout(()=>$("#aemail")?.focus(),50);
+}
+function authMsg(e){const c=(e&&e.code)||"";
+  if(/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c))return"Correo o contraseña incorrectos";
+  if(/too-many-requests/.test(c))return"Demasiados intentos. Espera unos minutos.";
+  if(/invalid-email/.test(c))return"El correo no es válido";
+  if(/network/.test(c))return"Sin internet. Revisa la conexión.";
+  return"No se pudo entrar ("+c+")"}
+async function authLogin(){if(authBusy)return;const em=$("#aemail").value.trim(),pw=$("#apass").value,err=$("#aerr");
+  if(!em||!pw){err.textContent="Escribe correo y contraseña";return}
+  authBusy=true;err.textContent="Entrando…";
+  try{await firebase.auth().signInWithEmailAndPassword(em,pw)}catch(e){err.textContent=authMsg(e);$("#apass").value=""}
+  authBusy=false}
+async function authReset(){const em=$("#aemail").value.trim(),err=$("#aerr");if(!em){err.textContent="Escribe primero tu correo";return}
+  try{await firebase.auth().sendPasswordResetEmail(em);err.textContent="Te enviamos un correo para cambiar la contraseña"}catch(e){err.textContent=authMsg(e)}}
 function renderGate(){
   if(!clavesLoaded){$("#app").innerHTML=`<div class="empty"><div class="big">🥟</div><p>Cargando…</p></div>`;return}
   if(!claves||!claves.ventas||!claves.cocina){
@@ -648,6 +686,7 @@ function productionPlan(all){
 /* ---------- Render ---------- */
 function render(){
   const lo=$("#logout");document.body.classList.toggle("kitchen",role==="cocina");
+  if(authNeeded&&!authUser){$("#nav").hidden=true;$("#paybar").hidden=true;lo.hidden=true;renderAuth();return}
   if(!role){$("#nav").hidden=true;$("#paybar").hidden=true;lo.hidden=true;renderGate();return}
   lo.hidden=false;lo.textContent=(role==="cocina"?"👨‍🍳 ":"💵 ")+(who||"")+"  Salir";lo.title=role==="cocina"?"Cocina":staffRol(who);
   if(role==="cocina"){$("#nav").hidden=true;$("#paybar").hidden=true;tab="cocina";renderKitchen();return}
@@ -1053,6 +1092,7 @@ function renderAnalysis(){
 function renderSettings(){
   $("#app").innerHTML=`
     <h2>Ajustes</h2>
+    ${authUser?`<div class="card"><h3>🔒 Seguridad</h3><p class="sub" style="margin:0 0 10px">Este dispositivo está conectado como <b>${esc(authUser.email)}</b>. Si pierdes o cambias un dispositivo, cambia la contraseña en Firebase.</p><button class="btn danger" id="authOut">Cerrar sesión de este dispositivo</button></div>`:""}
     <div class="card"><h3>Precios y costos</h3><p class="sub" style="margin:0 0 6px">El costo sirve para calcular la ganancia estimada.</p>
       <div class="frow head"><span>Producto</span><span>Precio $</span><span>Costo $</span></div>
       ${PRODUCTS.map(f=>`<div class="frow"><span style="font-weight:700">${f.name}</span>
@@ -1096,7 +1136,7 @@ function renderSettings(){
 }
 
 /* ---------- Eventos ---------- */
-document.addEventListener("keydown",e=>{if(!$("#askBox").hidden){if(e.key==="Escape")askDone($("#askIn").hidden?false:null);if(e.key==="Enter")$("#askYes").click();return}if(e.key==="Enter"&&e.target.id==="acctName")$("#createAcct").click();if(e.key==="Escape"&&!$("#modal").hidden)closePreview();if(e.key==="Enter"&&e.target.id==="pin")tryLogin();if(e.key==="Enter"&&e.target.id==="nc")$("#createKeys")?.click();if(e.key==="Enter"&&e.target.id==="newStaff")$("#addStaff").click();if(e.key==="Enter"&&e.target.id==="newCook")$("#addCook").click()});
+document.addEventListener("keydown",e=>{if(!$("#askBox").hidden){if(e.key==="Escape")askDone($("#askIn").hidden?false:null);if(e.key==="Enter")$("#askYes").click();return}if(e.key==="Enter"&&e.target.id==="acctName")$("#createAcct").click();if(e.key==="Escape"&&!$("#modal").hidden)closePreview();if(e.key==="Enter"&&e.target.id==="pin")tryLogin();if(e.key==="Enter"&&(e.target.id==="aemail"||e.target.id==="apass"))authLogin();if(e.key==="Enter"&&e.target.id==="nc")$("#createKeys")?.click();if(e.key==="Enter"&&e.target.id==="newStaff")$("#addStaff").click();if(e.key==="Enter"&&e.target.id==="newCook")$("#addCook").click()});
 document.addEventListener("change",async e=>{
   if(e.target.id!=="restore"||db||!isAdmin())return;const f=e.target.files[0];if(!f)return;
   try{const d=JSON.parse(await f.text());if(d.app!=="empanadictos"||!Array.isArray(d.sales))throw 0;
@@ -1119,6 +1159,9 @@ document.addEventListener("click",async ev=>{
   if(b.id==="closeModal"){closePreview();return}
   if(b.id==="pdf"){makePdf(b);return}
   if(b.id==="logout"){logout();return}
+  if(b.id==="authEnter"){authLogin();return}
+  if(b.id==="authReset"){authReset();return}
+  if(b.id==="authOut"){if(await ask("¿Cerrar la sesión segura de este dispositivo? Tendrás que volver a escribir el correo y la contraseña.",{ok:"Cerrar sesión",danger:true})){if(shiftId)await endShift(shiftId);try{ssDel()}catch(e){}await firebase.auth().signOut()}return}
   if(b.dataset.me!==undefined&&pendingRole){setSession(pendingRole,b.dataset.me);toast("Hola, "+b.dataset.me);render();window.scrollTo(0,0);return}
   if(b.id==="backLogin"){pendingRole=null;renderGate();return}
   if(b.dataset.login){loginRole=b.dataset.login;renderGate();return}

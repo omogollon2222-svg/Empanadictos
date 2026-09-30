@@ -1,9 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Solo las colecciones que usa Empanadictos
+    // Solo las cuentas de esta lista pueden leer o escribir.
+    // Para agregar otra cuenta, añade su correo entre comillas.
+    function autorizado() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'omogollon2222@gmail.com'
+        ];
+    }
     match /{col}/{id} {
-      allow read, write: if col in ['ventas','cuentas','turnos','perdidas','cierres','tienda'];
+      allow read, write: if autorizado()
+        && col in ['ventas','cuentas','turnos','perdidas','cierres','tienda'];
     }
   }
 }

@@ -1,18 +1,11 @@
-// ─────────────────────────────────────────────────────────────
-// Empanadictos · Conexión en la nube (opcional)
-//
-// Si dejas esto vacío, la app funciona igual, pero guarda los datos
-// SOLO en el dispositivo donde se usa (la cocina no verá los pedidos
-// de la caja si están en dispositivos distintos).
-//
-// Para que caja y cocina se sincronicen, pega aquí la configuración
-// de tu proyecto de Firebase (ver README.md, paso 3).
-// ─────────────────────────────────────────────────────────────
+// Empanadictos · Conexión segura con Firebase.
+// Estos datos no son secretos: la protección la dan el inicio de sesión
+// y las reglas de firestore.rules.
 window.FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyDNA8HxzKnKYorhPoQ1GF96R4qR52JpMZQ",
+  authDomain: "empanadictos.firebaseapp.com",
+  projectId: "empanadictos",
+  storageBucket: "empanadictos.firebasestorage.app",
+  messagingSenderId: "233462228769",
+  appId: "1:233462228769:web:5743c77509afea96f84060"
 };
