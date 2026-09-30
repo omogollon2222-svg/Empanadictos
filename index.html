@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1C1315">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<title>Empanadictos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+:root{
+  --carbon:#1C1315; --brasa:#D62839; --chispa:#FFC93C; --naranja:#F2762E; --masa:#F6E3B8; --pared:#E9B48E;
+  --bg:#FBEEE2; --surface:#FFFFFF; --surface2:#FFF7EE; --ink:#2A1C1E; --muted:#7A6260; --line:#EBD5C4;
+  --good:#2E9E62; --warn:#E0A800; --shadow:0 2px 0 rgba(28,19,21,.08);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#170F11;--surface:#241A1C;--surface2:#2C2023;--ink:#FBEEE2;--muted:#BFA59C;--line:#3A2B2E;--shadow:none}
+}
+:root[data-theme="dark"]{--bg:#170F11;--surface:#241A1C;--surface2:#2C2023;--ink:#FBEEE2;--muted:#BFA59C;--line:#3A2B2E;--shadow:none}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--chispa);outline-offset:2px}
+
+header{background:radial-gradient(120% 140% at 50% 120%,rgba(214,40,57,.55) 0%,rgba(214,40,57,0) 60%),repeating-conic-gradient(from 0deg at 50% 110%,rgba(214,40,57,.18) 0deg 8deg,transparent 8deg 22deg),var(--carbon);color:#fff;padding:16px 16px 20px}
+.brand{display:flex;align-items:center;gap:12px;max-width:820px;margin:0 auto}
+.brand svg{flex:none;width:54px;height:40px}
+.word{font-family:"Lilita One",Impact,sans-serif;font-size:clamp(26px,7.5vw,40px);line-height:1;letter-spacing:.5px;background:linear-gradient(180deg,#FFE58A 0%,var(--chispa) 35%,var(--naranja) 65%,var(--brasa) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 rgba(0,0,0,.5))}
+.tag{font-family:Pacifico,cursive;font-size:14px;color:#FFE9C7;margin-top:2px}
+.hright{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.sync{font-size:11px;color:#E9CFC0;text-align:right}
+.gear{border:0;background:rgba(255,255,255,.12);color:#fff;border-radius:12px;width:42px;height:42px;font-size:20px}
+
+main{max-width:820px;margin:0 auto;padding:16px 16px 190px}
+h2{font-family:"Lilita One",Impact,sans-serif;font-weight:400;font-size:24px;margin:10px 0 12px;letter-spacing:.3px}
+h3{font-size:17px;font-weight:800;margin:0 0 10px}
+.sub{color:var(--muted);font-size:14px;margin:-6px 0 14px}
+small.m{color:var(--muted);font-weight:600}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--carbon);display:flex;justify-content:center;gap:2px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));z-index:20}
+nav.tabs[hidden],.paybar[hidden],nav.tabs button[hidden]{display:none}
+nav.tabs button{flex:1;max-width:150px;background:none;border:0;color:#CDB5AC;padding:7px 2px;border-radius:14px;font-weight:700;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+nav.tabs button .ic{font-size:21px;line-height:1}
+nav.tabs button[aria-selected="true"]{background:linear-gradient(180deg,var(--brasa),#A71D2C);color:#fff}
+nav.tabs .pill{position:absolute;top:2px;right:calc(50% - 22px);background:var(--chispa);color:var(--carbon);font-size:11px;font-weight:800;border-radius:9px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px}
+
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media (min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
+.cell{position:relative}
+.tile{width:100%;position:relative;background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:14px 12px 12px;text-align:left;min-height:130px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:var(--shadow);transition:transform .08s}
+.tile.small{min-height:98px;padding:12px}
+.tile:active{transform:scale(.97)}
+.tile.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,var(--surface))}
+.tile.out{opacity:.45}
+.tile .dot{width:38px;height:28px}
+.tile .name{font-weight:800;font-size:16px;line-height:1.15;margin-top:6px}
+.tile .price{color:var(--muted);font-weight:700;font-size:14px}
+.stock{font-size:12px;font-weight:800}
+.stock.low{color:var(--brasa)}
+.badge{position:absolute;top:10px;right:10px;min-width:36px;height:36px;border-radius:18px;background:var(--c);color:#fff;font-family:"Lilita One",sans-serif;font-size:20px;display:grid;place-items:center;padding:0 8px;text-shadow:0 1px 0 rgba(0,0,0,.3)}
+.minus{position:absolute;bottom:10px;right:10px;width:38px;height:38px;border-radius:12px;border:2px solid var(--line);background:var(--surface2);font-size:22px;font-weight:800;line-height:1;display:grid;place-items:center}
+
+.paybar{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:15;padding:0 10px}
+.paybox{max-width:800px;margin:0 auto;background:var(--carbon);color:#fff;border-radius:22px;padding:12px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(28,19,21,.35)}
+.paybox .tot{font-family:"Lilita One",sans-serif;font-size:28px;line-height:1;color:var(--chispa)}
+.paybox .cnt{font-size:12px;color:#E9CFC0}
+.seg{display:flex;background:#3A2A2D;border-radius:12px;padding:3px;margin-left:auto}
+.seg button{border:0;background:none;color:#E9CFC0;font-size:12px;font-weight:700;padding:7px 8px;border-radius:9px}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--carbon)}
+.cta{border:0;border-radius:16px;background:linear-gradient(180deg,var(--chispa),var(--naranja));color:var(--carbon);font-weight:800;font-size:16px;padding:14px 16px;white-space:nowrap}
+.cta:disabled{opacity:.4}
+
+.goal{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:14px}
+.goal .row{display:flex;justify-content:space-between;font-weight:700;font-size:14px;gap:8px}
+.bar{height:12px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--chispa),var(--naranja),var(--brasa))}
+
+.chips{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.chips button{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;font-weight:700;font-size:14px}
+.chips button[aria-pressed="true"]{background:var(--carbon);border-color:var(--carbon);color:#fff}
+.recs{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.rec{display:flex;gap:12px;align-items:flex-start;border-radius:18px;padding:14px;background:var(--surface);border-left:8px solid var(--rc);box-shadow:var(--shadow)}
+.rec .em{font-size:26px;line-height:1;flex:none;width:34px;text-align:center}
+.rec b{display:block;font-size:16px;line-height:1.25;margin-bottom:3px}
+.rec p{margin:0;color:var(--muted);font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+@media (min-width:600px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px}
+.kpi .v{font-family:"Lilita One",sans-serif;font-size:27px;line-height:1.05}
+.kpi .l{font-size:13px;color:var(--muted);font-weight:700}
+.kpi .d{font-size:12px;font-weight:800;margin-top:4px}
+.up{color:var(--good)} .down{color:var(--brasa)}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:14px;margin-bottom:14px}
+.hbar{display:grid;grid-template-columns:128px 1fr 74px;align-items:center;gap:8px;margin:8px 0;font-size:14px}
+.hbar .n{font-weight:700;line-height:1.1}
+.hbar .t{height:22px;background:var(--surface2);border-radius:8px;overflow:hidden}
+.hbar .t i{display:block;height:100%;border-radius:8px}
+.hbar .x{text-align:right;font-weight:800}
+.vchart{display:flex;align-items:flex-end;gap:4px;height:140px;padding-top:18px}
+.vchart .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.vchart .col i{display:block;width:100%;border-radius:6px 6px 2px 2px;background:var(--pared);min-height:2px}
+.vchart .col.peak i{background:linear-gradient(180deg,var(--chispa),var(--brasa))}
+.vchart .col span{font-size:10px;color:var(--muted);margin-top:4px;white-space:nowrap}
+.vchart .col em{font-style:normal;font-size:10px;font-weight:800;margin-bottom:2px}
+.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.plan div{background:var(--surface2);border-radius:14px;padding:10px;text-align:center}
+.plan .v{font-family:"Lilita One",sans-serif;font-size:30px;line-height:1}
+.plan .l{font-size:13px;font-weight:700}
+.list{display:flex;flex-direction:column}
+.sale{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.sale:last-child{border-bottom:0}
+.sale .when{color:var(--muted);width:70px;flex:none;font-size:13px}
+.sale .what{flex:1;min-width:0}
+.sale .amt{font-weight:800}
+.sale button{border:0;background:none;color:var(--muted);font-size:18px;padding:4px 6px}
+.empty{text-align:center;padding:24px 12px;color:var(--muted)}
+.empty .big{font-size:44px}
+.demo{background:var(--chispa);color:var(--carbon);border-radius:14px;padding:10px 14px;font-weight:700;font-size:14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.demo button{border:0;background:var(--carbon);color:#fff;border-radius:10px;padding:6px 10px;font-weight:700;font-size:13px}
+
+/* Cocina */
+.who{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.who span{font-weight:800;font-size:14px}
+.kcols{display:grid;gap:14px}
+@media (min-width:760px){.kcols{grid-template-columns:repeat(3,1fr)}}
+.kcol h3{display:flex;align-items:center;gap:8px}
+.kcol h3 .n{background:var(--carbon);color:#fff;border-radius:10px;padding:1px 9px;font-size:14px}
+.ticket{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px;margin-bottom:10px;border-top:8px solid var(--tc,var(--line))}
+.ticket.ok{--tc:var(--good)} .ticket.mid{--tc:var(--warn)} .ticket.late{--tc:var(--brasa)}
+.ticket .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ticket .num{font-family:"Lilita One",sans-serif;font-size:24px}
+.ticket .clock{font-family:"Lilita One",sans-serif;font-size:22px;font-variant-numeric:tabular-nums}
+.ticket.late .clock{color:var(--brasa)}
+.ticket ul{margin:8px 0 10px;padding:0;list-style:none;font-size:17px;font-weight:700}
+.ticket li{padding:2px 0}
+.ticket li b{display:inline-block;min-width:30px}
+.ticket .meta{font-size:13px;color:var(--muted);margin-bottom:8px}
+.ticket .go{width:100%;border:0;border-radius:14px;padding:13px;font-weight:800;font-size:16px;color:#fff;background:var(--brasa)}
+.ticket .go.ready{background:var(--good)}
+.ticket .go.deliver{background:var(--carbon)}
+
+/* Inventario */
+.inv{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:600px){.inv{grid-template-columns:repeat(2,1fr)}}
+.invc{background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:14px;border-left:8px solid var(--c)}
+.invc .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.invc .big{font-family:"Lilita One",sans-serif;font-size:40px;line-height:1}
+.status{font-size:12px;font-weight:800;border-radius:8px;padding:3px 8px;background:var(--surface2)}
+.status.low{background:var(--brasa);color:#fff}
+.status.ok{background:color-mix(in srgb,var(--good) 18%,var(--surface));color:var(--good)}
+.status.zero{background:var(--carbon);color:#fff}
+.invc .act{display:flex;gap:8px;margin-top:10px}
+.invc .act input{flex:1;min-width:0}
+
+.frow{display:grid;grid-template-columns:1fr 84px 84px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.frow:last-child{border-bottom:0}
+.frow.head{font-size:12px;color:var(--muted);font-weight:800;border-bottom:2px solid var(--line)}
+.frow input,.inp{width:100%;border:2px solid var(--line);background:var(--surface2);border-radius:12px;padding:10px;font-weight:700;font-size:16px}
+.btn{border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 16px;font-weight:800}
+.btn.primary{background:var(--brasa);border-color:var(--brasa);color:#fff}
+.btn.dark{background:var(--carbon);border-color:var(--carbon);color:#fff}
+.btn.danger{color:var(--brasa)}
+.btn.sm{padding:8px 12px;font-size:14px;border-radius:12px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.f{display:block;font-size:13px;font-weight:800;color:var(--muted);margin-bottom:4px}
+.diff{font-family:"Lilita One",sans-serif;font-size:34px;line-height:1.1}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-size:12px;color:var(--muted);padding:6px 4px;border-bottom:2px solid var(--line)}
+.tbl td{padding:8px 4px;border-bottom:1px solid var(--line)}
+.tbl td.r,.tbl th.r{text-align:right}
+.scroll{overflow-x:auto}
+.daynav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.daynav b{flex:1;text-align:center;font-size:17px}
+.daynav button{width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface);font-weight:800;font-size:18px}
+.closed{background:color-mix(in srgb,var(--good) 14%,var(--surface));border-color:var(--good)}
+.login{max-width:420px;margin:10px auto 0}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.role{border:3px solid var(--line);background:var(--surface);border-radius:22px;padding:18px 10px;text-align:center;font-weight:800;font-size:17px}
+.role .e{font-size:40px;display:block;margin-bottom:4px}
+.role[aria-pressed="true"]{border-color:var(--brasa);background:color-mix(in srgb,var(--brasa) 10%,var(--surface))}
+.pin{font-family:"Lilita One",sans-serif;font-size:32px;letter-spacing:10px;text-align:center}
+.err{color:var(--brasa);font-weight:800;font-size:14px;min-height:20px;margin:8px 0}
+.rolechip{background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:12px;padding:8px 12px;font-weight:800;font-size:13px;white-space:nowrap}
+body.kitchen main{max-width:1200px;padding-bottom:40px}
+body.kitchen .ticket ul{font-size:20px}
+.people{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 10px}
+.person{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:2px solid var(--line);border-radius:999px;padding:6px 6px 6px 12px;font-weight:700;font-size:14px}
+.person .r{font-size:11px;font-weight:800;border-radius:8px;padding:2px 6px;background:var(--carbon);color:#fff}
+.person .r.caj{background:var(--pared);color:var(--carbon)}
+.person button{border:0;background:none;color:var(--muted);font-size:16px;padding:2px 6px}
+.addrow{display:flex;gap:8px;flex-wrap:wrap}
+.addrow input{flex:1;min-width:140px}
+.addrow select{border:2px solid var(--line);background:var(--surface2);border-radius:12px;padding:10px;font-weight:700}
+.names{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.names button{border:3px solid var(--line);background:var(--surface);border-radius:18px;padding:16px 8px;font-weight:800;font-size:16px}
+.names small{display:block;color:var(--muted);font-size:12px;font-weight:700}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(28,19,21,.72);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.modal[hidden]{display:none}
+.mbar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--carbon);color:#fff}
+.mbar b{flex:1;font-size:15px}
+.mbar .cta{padding:10px 14px;font-size:14px}
+.mbar .x{border:0;background:rgba(255,255,255,.14);color:#fff;border-radius:12px;padding:10px 12px;font-weight:800}
+.mbody{flex:1;overflow:auto;padding:14px 10px 30px}
+.mpage{max-width:820px;margin:0 auto;background:#fff;border-radius:10px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.shift{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.shift:last-child{border-bottom:0}
+.shift .nm{flex:1;min-width:0}
+.shift .hh{font-weight:800;white-space:nowrap}
+.live{display:inline-block;background:var(--good);color:#fff;border-radius:8px;font-size:11px;font-weight:800;padding:1px 6px;margin-left:4px}
+.accts{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 10px;margin:0 -2px 6px;scroll-snap-type:x proximity}
+.acc{flex:none;scroll-snap-align:start;min-width:128px;text-align:left;border:3px solid var(--line);background:var(--surface);border-radius:18px;padding:10px 12px;font-weight:800;font-size:15px;line-height:1.2;position:relative}
+.acc small{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-top:3px}
+.acc.on{border-color:var(--brasa);background:var(--brasa);color:#fff}
+.acc.on small{color:#FFE3D0}
+.acc.open::before{content:"";position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;background:var(--chispa)}
+.acc.old::before{background:var(--brasa)}
+.acc.on.old::before{background:#fff}
+.acc.add{border-style:dashed;color:var(--brasa);min-width:110px}
+.acctcard{background:var(--surface);border:3px solid var(--brasa);border-radius:20px;padding:14px;margin-bottom:14px}
+.acctcard .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.acctcard .nm{font-family:"Lilita One",sans-serif;font-size:24px;line-height:1.1}
+.acctcard .tot{font-family:"Lilita One",sans-serif;font-size:28px;color:var(--brasa);white-space:nowrap}
+.round{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.round:last-of-type{border-bottom:0}
+.round .rn{flex:none;width:62px;color:var(--muted);font-size:12px;font-weight:700}
+.round .it{flex:1}
+.tagp{display:inline-block;font-size:11px;font-weight:800;border-radius:7px;padding:1px 7px;background:var(--surface2);border:1px solid var(--line)}
+.tagp.due{background:var(--brasa);color:#fff;border-color:var(--brasa)}
+.tagp.void{background:var(--carbon);color:#fff;border-color:var(--carbon)}
+.acctTag{display:inline-block;background:var(--chispa);color:var(--carbon);font-weight:800;border-radius:10px;padding:3px 10px;font-size:15px;margin:6px 0 0}
+.warnbox{background:color-mix(in srgb,var(--brasa) 12%,var(--surface));border:2px solid var(--brasa);border-radius:18px;padding:12px 14px;margin-bottom:14px;font-size:14px}
+.warnbox b{display:block;font-size:16px;margin-bottom:2px}
+.change{font-family:"Lilita One",sans-serif;font-size:30px;color:var(--good)}
+.bigseg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 12px}
+.bigseg button{border:3px solid var(--line);background:var(--surface);border-radius:16px;padding:14px;font-weight:800;font-size:16px}
+.bigseg button[aria-pressed="true"]{border-color:var(--carbon);background:var(--carbon);color:#fff}
+.mbar2{display:flex;gap:8px;padding:0 12px 10px;background:var(--carbon)}
+.mbar2 button{flex:1}
+.wa{border:0;border-radius:16px;background:#25D366;color:#073B1F;font-weight:800;font-size:15px;padding:12px 10px}
+.wa.ready{background:#fff;color:#128C4A;outline:3px solid #25D366}
+.askbox{position:fixed;inset:0;z-index:80;background:rgba(28,19,21,.6);display:grid;place-items:center;padding:20px}
+.askbox[hidden]{display:none}
+.askc{background:var(--surface);border-radius:20px;padding:18px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.askc p{margin:0 0 12px;font-weight:700;font-size:16px}
+.askc .inp{margin-bottom:12px}
+.proj{font-size:13px;font-weight:800;margin-top:6px}
+.lost{display:inline-block;font-size:11px;font-weight:800;color:var(--brasa)}
+.wk{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:18px}
+.wk .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.wk .col i{display:block;width:100%;border-radius:6px 6px 2px 2px;background:var(--pared);min-height:2px}
+.wk .col.best i{background:var(--good)} .wk .col.worst i{background:var(--brasa)}
+.wk .col span{font-size:11px;color:var(--muted);margin-top:4px}
+.wk .col em{font-style:normal;font-size:10px;font-weight:800;margin-bottom:2px}
+.mtbl td,.mtbl th{font-size:13px}
+.localnote{background:var(--surface2);border:2px dashed var(--line);border-radius:16px;padding:12px;font-size:14px;margin-bottom:14px}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translate(-50%,-160%);background:var(--good);color:#fff;font-weight:800;padding:12px 18px;border-radius:14px;z-index:50;transition:transform .25s ease;box-shadow:0 8px 20px rgba(0,0,0,.25);max-width:90vw;text-align:center}
+.toast.show{transform:translate(-50%,0)}
+.toast.bad{background:var(--brasa)}
+@media (prefers-reduced-motion:reduce){.toast,.tile{transition:none}}
+</style>
+<style id="repcss">
+.rep{font-family:Nunito,Arial,sans-serif;color:#2A1C1E;background:#fff;width:100%;font-size:12.5px;line-height:1.45}
+.rep *{box-sizing:border-box}
+.rep .hd{background:#1C1315;color:#fff;border-radius:12px;padding:16px 18px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.rep .brand{font-family:"Lilita One",Arial,sans-serif;font-size:30px;color:#FFC93C;line-height:1}
+.rep .tag{font-family:Pacifico,cursive;font-size:12px;color:#FFE9C7}
+.rep .ttl{text-align:right;font-size:11.5px;color:#E9CFC0}
+.rep .ttl b{display:block;font-size:16px;color:#fff}
+.rep h4{font-family:"Lilita One",Arial,sans-serif;font-weight:400;font-size:17px;margin:18px 0 8px;color:#1C1315;border-bottom:3px solid #D62839;padding-bottom:3px}
+.rep .kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rep .kp>div{border:1.5px solid #EBD5C4;border-radius:10px;padding:8px 10px;background:#FFF7EE}
+.rep .kp .v{font-family:"Lilita One",Arial,sans-serif;font-size:22px;line-height:1.1}
+.rep .kp .l{font-size:11px;color:#7A6260;font-weight:700}
+.rep .kp .d{font-size:10.5px;font-weight:800;color:#7A6260}
+.rep .up{color:#2E9E62}.rep .dn{color:#D62839}
+.rep ul.hl{margin:0;padding-left:18px}.rep ul.hl li{margin:4px 0}
+.rep table{width:100%;border-collapse:collapse}
+.rep th{text-align:left;font-size:10.5px;color:#7A6260;border-bottom:2px solid #EBD5C4;padding:4px}
+.rep td{padding:5px 4px;border-bottom:1px solid #F1E3D6;vertical-align:middle}
+.rep .r{text-align:right}
+.rep .bar{height:9px;background:#F6E3B8;border-radius:5px;overflow:hidden;min-width:50px}
+.rep .bar i{display:block;height:100%;border-radius:5px}
+.rep .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.rep .hrs{display:flex;align-items:flex-end;gap:3px;height:90px;margin-top:6px}
+.rep .hrs div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.rep .hrs i{display:block;width:100%;background:#E9B48E;border-radius:3px 3px 1px 1px;min-height:1px}
+.rep .hrs .pk i{background:#D62839}
+.rep .hrs span{font-size:8.5px;color:#7A6260}
+.rep .hrs em{font-style:normal;font-size:8.5px;font-weight:800}
+.rep .rc{border-left:5px solid #D62839;padding:6px 10px;margin:6px 0;background:#FFF7EE;border-radius:6px}
+.rep .rc b{display:block}
+.rep .note{font-size:10.5px;color:#7A6260;margin-top:4px}
+.rep .ft{margin-top:18px;font-size:10px;color:#7A6260;text-align:center;border-top:1px solid #EBD5C4;padding-top:8px}
+@media (max-width:560px){.rep .kp{grid-template-columns:repeat(2,1fr)}.rep .two{grid-template-columns:1fr}}
+.rep.pdf .kp{grid-template-columns:repeat(3,1fr)}.rep.pdf .two{grid-template-columns:1fr 1fr}
+.rep .avoid{break-inside:avoid;page-break-inside:avoid}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 54 40" aria-hidden="true">
+      <path d="M4 34 A23 23 0 0 1 50 34 Z" fill="#F6D48C" stroke="#8A4B22" stroke-width="2"/>
+      <path d="M6 30 A21 21 0 0 1 48 30" fill="none" stroke="#E0A85A" stroke-width="5" stroke-dasharray="3 3"/>
+      <circle cx="20" cy="26" r="1.8" fill="#D62839"/><circle cx="33" cy="22" r="1.5" fill="#D62839"/>
+      <path d="M44 4 l-4 7 h4 l-3 7 7-9 h-4 l3-5z" fill="#FFC93C"/>
+    </svg>
+    <div><div class="word">Empanadictos</div><div class="tag">Una adicción legal</div></div>
+    <div class="hright">
+      <button class="rolechip" id="logout" hidden></button>
+      <div class="sync" id="sync">En este dispositivo</div>
+    </div>
+  </div>
+</header>
+
+<main id="app"></main>
+<div class="paybar" id="paybar" hidden></div>
+
+<nav class="tabs" role="tablist" id="nav" hidden>
+  <button role="tab" data-tab="vender"><span class="ic">🥟</span>Vender<span class="pill" id="apill" hidden></span></button>
+  <button role="tab" data-tab="inventario"><span class="ic">📦</span>Inventario</button>
+  <button role="tab" data-tab="caja"><span class="ic">💵</span>Caja</button>
+  <button role="tab" data-tab="analisis"><span class="ic">📊</span>Análisis</button>
+  <button role="tab" data-tab="ajustes"><span class="ic">⚙️</span>Ajustes</button>
+</nav>
+<div class="modal" id="modal" hidden role="dialog" aria-label="Vista previa del reporte">
+  <div class="mbar"><b>Vista previa del reporte</b><button class="x" id="closeModal">Cerrar</button></div>
+  <div class="mbar2"><button class="wa" id="share">Compartir por WhatsApp</button><button class="cta" id="pdf">Descargar PDF</button></div>
+  <div class="mbody"><div class="mpage" id="repView"></div></div>
+</div>
+<div class="askbox" id="askBox" hidden role="dialog" aria-modal="true"><div class="askc"><p id="askMsg"></p><input class="inp" id="askIn" hidden maxlength="80"><div class="row2"><button class="btn" id="askNo">Cancelar</button><button class="btn primary" id="askYes">Aceptar</button></div></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const PRODUCTS=[
+  {id:"ranchera",name:"Ranchera",c:"#D62839",k:"emp"},
+  {id:"pork",name:"Pulled Pork",c:"#7B2D26",k:"emp"},
+  {id:"hawaiana",name:"Hawaiana",c:"#F2762E",k:"emp"},
+  {id:"queso",name:"Queso",c:"#E0A800",k:"emp"},
+  {id:"pollo",name:"Pollo y Champiñones",c:"#A8744A",k:"emp"},
+  {id:"jamaica",name:"Jamaica con piña",c:"#A0204C",k:"beb"},
+  {id:"limonada",name:"Limonada",c:"#B5B82A",k:"beb"},
+  {id:"coca",name:"Coca-Cola personal",c:"#B0161F",k:"beb"},
+  {id:"aguasin",name:"Agua sin gas personal",c:"#5E9CC0",k:"beb"},
+  {id:"aguacon",name:"Agua con gas personal",c:"#3F7597",k:"beb"}
+];
+const EMP=PRODUCTS.filter(p=>p.k==="emp"), BEB=PRODUCTS.filter(p=>p.k==="beb");
+const DEFAULT_CONFIG={
+  prices:{ranchera:1.5,pork:1.75,hawaiana:1.5,queso:1.25,pollo:1.5,jamaica:1.5,limonada:1.5,coca:1.5,aguasin:1.5,aguacon:1.5},
+  costs:{ranchera:.6,pork:.75,hawaiana:.6,queso:.45,pollo:.6,jamaica:.4,limonada:.35,coca:.8,aguasin:.5,aguacon:.6},
+  goal:80, staff:[{name:"Administrador",rol:"admin"}], cooks:["Cocinero 1","Cocinero 2"], target:8, stockMax:50
+};
+const LS="empanadictos_v2";
+let config=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+let sales=[], cierres={}, inv={base:Object.fromEntries(EMP.map(p=>[p.id,50])),since:0};
+let demo=false, demoSales=null;
+let tab="vender", period="hoy", cart={}, pay="efectivo", client="", cajaDay=null;
+let perdidas=[];
+let cuentas=[], acct=null, charging=false, newAcct=false, received="", shareFile=null, askRes=null;
+let turnos=[], shiftId=null, demoShifts=null;
+let who=null, pendingRole=null, role=null, claves=null, clavesLoaded=false, loginRole="ventas", fails=0, lockUntil=0;
+let myCook=null; try{myCook=localStorage.getItem("emp_cook")}catch(e){}
+let db=null, dl=null, loaded=false, seenPending=null;
+
+/* ---------- Almacenamiento ---------- */
+function mergeCfg(c){c=c||{};return{prices:{...DEFAULT_CONFIG.prices,...(c.prices||{})},costs:{...DEFAULT_CONFIG.costs,...(c.costs||{})},goal:Number(c.goal)||DEFAULT_CONFIG.goal,cooks:Array.isArray(c.cooks)&&c.cooks.length?c.cooks:DEFAULT_CONFIG.cooks,staff:Array.isArray(c.staff)&&c.staff.length?c.staff:DEFAULT_CONFIG.staff,target:Number(c.target)||DEFAULT_CONFIG.target,stockMax:Number(c.stockMax)||50}}
+function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LS)||"null");if(s){config=mergeCfg(s.config);sales=s.sales||[];cierres=s.cierres||{};if(s.inv)inv=s.inv;if(s.claves)claves=s.claves;if(s.turnos)turnos=s.turnos;if(s.cuentas)cuentas=s.cuentas;if(s.perdidas)perdidas=s.perdidas;}}catch(e){}}
+function saveLocal(){if(db)return;try{localStorage.setItem(LS,JSON.stringify({config,sales,cierres,inv,claves,turnos,cuentas,perdidas}))}catch(e){}}
+loadLocal();
+window.addEventListener("storage",e=>{if(db||e.key!==LS)return;const pend=seenPending;loadLocal();if(acct&&!cuentas.some(c=>c.id===acct&&c.status==="abierta")){acct=null;charging=false}notifyNew();restoreSession();if(!(tab==="vender"&&document.activeElement&&document.activeElement.tagName==="INPUT"))render()});
+
+(async()=>{
+  await new Promise(r=>setTimeout(r,0));
+  try{
+    let d=null;
+    if(window.claude&&window.claude.use){
+      const [cd,dd]=await Promise.all([window.claude.use("db"),window.claude.use("downloads")]);
+      d=cd; dl=dd;
+    }else if(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey&&window.firebase){
+      /* Versión GitHub Pages: sincroniza caja y cocina con Firebase Firestore */
+      if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
+      d=firebase.firestore();
+    }
+    if(!d){clavesLoaded=true;restoreSession();render();return}
+    db=d; sales=[]; cierres={}; claves=null; turnos=[]; cuentas=[]; perdidas=[];
+    db.doc("tienda/claves").onSnapshot(s=>{claves=s.exists?s.data():null;clavesLoaded=true;restoreSession();render()},()=>{clavesLoaded=true;render()});
+    $("#sync").textContent="Guardado en la nube";
+    db.collection("ventas").orderBy("t","desc").limit(1000).onSnapshot(snap=>{
+      sales=snap.docs.map(x=>({id:x.id,...x.data()}));
+      notifyNew(); loaded=true; render();
+    },()=>{$("#sync").textContent="Sin conexión"});
+    db.doc("tienda/config").onSnapshot(s=>{if(s.exists){config=mergeCfg(s.data());render()}},()=>{});
+    db.doc("tienda/inventario").onSnapshot(s=>{if(s.exists){const v=s.data();inv={base:{...inv.base,...(v.base||{})},since:v.since||0};render()}},()=>{});
+    db.collection("perdidas").orderBy("t","desc").limit(1000).onSnapshot(snap=>{perdidas=snap.docs.map(x=>({id:x.id,...x.data()}));if(role==="ventas"&&tab!=="vender")render()},()=>{});
+    db.collection("cuentas").orderBy("tOpen","desc").limit(300).onSnapshot(snap=>{cuentas=snap.docs.map(x=>({id:x.id,...x.data()}));if(acct&&!cuentas.some(c=>c.id===acct&&c.status==="abierta")){acct=null;charging=false}if(role==="ventas")render()},()=>{});
+    db.collection("turnos").orderBy("tIn","desc").limit(500).onSnapshot(snap=>{turnos=snap.docs.map(x=>({id:x.id,...x.data()}));if(role&&(tab==="caja"||tab==="analisis"||tab==="cocina"))render()},()=>{});
+    db.collection("cierres").onSnapshot(snap=>{cierres={};snap.docs.forEach(x=>cierres[x.id]=x.data());if(tab==="caja")render()},()=>{});
+  }catch(e){clavesLoaded=true;restoreSession();render()}
+})();
+
+/* ---------- Claves y roles ---------- */
+async function hashPin(r,pin){
+  const txt="empanadictos|"+r+"|"+pin;
+  try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(txt));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
+  catch(e){let h1=5381;for(const c of txt)h1=((h1<<5)+h1+c.charCodeAt(0))|0;return "s"+(h1>>>0).toString(16)}
+}
+function restoreSession(){
+  let s=null;try{s=JSON.parse(ssGet()||"null")}catch(e){}
+  if(s&&s.who&&claves&&claves[s.role]&&claves[s.role]===s.h){if(role!==s.role){role=s.role;tab=role==="cocina"?"cocina":"vender";seenPending=null}who=s.who;shiftId=s.shift||null;if(role==="cocina"&&!myCook)myCook=who}
+  else{ if(s&&claves&&s.shift){endShift(s.shift);try{ssDel()}catch(e){}} if(role){role=null;who=null;shiftId=null} }
+}
+function ssGet(){try{return sessionStorage.getItem("emp_session")}catch(e){return null}}
+function ssSet(v){try{sessionStorage.setItem("emp_session",v)}catch(e){}}
+function ssDel(){try{sessionStorage.removeItem("emp_session")}catch(e){}}
+function isAdmin(){return role==="ventas"&&config.staff.some(s=>s.name===who&&s.rol==="admin")}
+function persistSession(){try{ssSet(JSON.stringify({role,h:claves[role],who,shift:shiftId}))}catch(e){}}
+function setSession(r,name,keepShift){role=r;who=name;pendingRole=null;tab=r==="cocina"?"cocina":"vender";if(r==="cocina"){myCook=name;try{localStorage.setItem("emp_cook",name)}catch(e){}}
+  if(!keepShift){shiftId=null;startShift(r,name).then(id=>{shiftId=id;persistSession();render()}).catch(()=>{})}
+  persistSession()}
+async function startShift(r,name){
+  const open=turnos.find(x=>x.name===name&&x.role===r&&!x.tOut&&Date.now()-x.tIn<16*36e5);if(open)return open.id;
+  const t={name,role:r,rol:r==="cocina"?"Cocina":staffRol(name),tIn:Date.now(),tOut:null};
+  if(db){const ref=await db.collection("turnos").add(t);return ref.id}
+  t.id="t"+Date.now()+Math.random().toString(36).slice(2,5);turnos.unshift(t);saveLocal();return t.id}
+async function endShift(id){if(!id)return;const p={tOut:Date.now()};
+  try{if(db)await db.collection("turnos").doc(id).update(p);else{const t=turnos.find(x=>x.id===id);if(t&&!t.tOut)Object.assign(t,p);saveLocal()}}catch(e){}}
+function staffRol(n){return (config.staff.find(x=>x.name===n)||{}).rol==="admin"?"Administrador":"Cajero"}
+function logout(){if(shiftId){endShift(shiftId);toast("Turno cerrado")}shiftId=null;role=null;who=null;pendingRole=null;cart={};try{ssDel()}catch(e){}render();window.scrollTo(0,0)}
+async function saveClaves(c){claves=c;if(db)await db.doc("tienda/claves").set(c);else saveLocal()}
+
+function renderGate(){
+  if(!clavesLoaded){$("#app").innerHTML=`<div class="empty"><div class="big">🥟</div><p>Cargando…</p></div>`;return}
+  if(!claves||!claves.ventas||!claves.cocina){
+    $("#app").innerHTML=`<div class="login"><h2>Crea las claves</h2>
+      <p class="sub">Una para caja y ventas, otra para cocina. Solo se hace una vez; después puedes cambiarlas desde Ajustes.</p>
+      <div class="card"><label class="f" for="nv">Clave de Ventas (4 a 8 números)</label><input class="inp pin" id="nv" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password">
+      <label class="f" for="nc" style="margin-top:12px">Clave de Cocina (4 a 8 números)</label><input class="inp pin" id="nc" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password">
+      <label class="f" for="adm" style="margin-top:12px">Tu nombre (administrador)</label><input class="inp" id="adm" maxlength="30" autocomplete="name" placeholder="Ej. María">
+      <div class="err" id="err"></div><button class="btn primary" style="width:100%" id="createKeys">Guardar claves y entrar a Ventas</button></div></div>`;
+    return;
+  }
+  if(pendingRole){
+    const list=pendingRole==="ventas"?config.staff.map(s=>({n:s.name,r:s.rol==="admin"?"Administrador":"Cajero"})):config.cooks.map(n=>({n,r:"Cocina"}));
+    $("#app").innerHTML=`<div class="login"><h2>¿Quién eres?</h2><p class="sub">Toca tu nombre para empezar el turno.</p>
+      <div class="names">${list.map(x=>`<button data-me="${esc(x.n)}">${esc(x.n)}<small>${x.r}</small></button>`).join("")}</div>
+      <p class="sub" style="margin-top:14px">¿No aparece tu nombre? ${pendingRole==="ventas"?"Agrégalo en Ajustes, Equipo.":"Pide al administrador que lo agregue en Ajustes, Equipo."}</p>
+      <button class="btn" style="width:100%" id="backLogin">Volver</button></div>`;
+    return;
+  }
+  $("#app").innerHTML=`<div class="login"><h2>¿Quién entra?</h2>
+    <div class="roles"><button class="role" data-login="ventas" aria-pressed="${loginRole==="ventas"}"><span class="e">💵</span>Ventas</button>
+    <button class="role" data-login="cocina" aria-pressed="${loginRole==="cocina"}"><span class="e">👨‍🍳</span>Cocina</button></div>
+    <div class="card"><label class="f" for="pin">Clave de ${loginRole==="ventas"?"Ventas":"Cocina"}</label>
+    <input class="inp pin" id="pin" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password">
+    <div class="err" id="err"></div><button class="btn primary" style="width:100%" id="enter">Entrar</button></div></div>`;
+  setTimeout(()=>$("#pin")?.focus(),50);
+}
+async function tryLogin(){
+  const err=$("#err");
+  if(Date.now()<lockUntil){err.textContent=`Demasiados intentos. Espera ${Math.ceil((lockUntil-Date.now())/1000)} segundos.`;return}
+  const pin=$("#pin").value.trim();if(!pin){err.textContent="Escribe la clave";return}
+  if(await hashPin(loginRole,pin)===claves[loginRole]){fails=0;pendingRole=loginRole;render();window.scrollTo(0,0)}
+  else{fails++;$("#pin").value="";if(fails>=5){lockUntil=Date.now()+30000;fails=0;err.textContent="Demasiados intentos. Espera 30 segundos."}else err.textContent="Clave incorrecta"}
+}
+
+async function addSale(s){if(db){await db.collection("ventas").add(s)}else{s.id="l"+Date.now()+Math.random().toString(36).slice(2,6);sales.unshift(s);saveLocal()}}
+async function patchSale(id,p){if(db){await db.collection("ventas").doc(id).update(p)}else{const s=sales.find(x=>x.id===id);Object.assign(s,p);saveLocal()}}
+async function addCuenta(c){if(db){const r=await db.collection("cuentas").add(c);return r.id}c.id="c"+Date.now()+Math.random().toString(36).slice(2,5);cuentas.unshift(c);saveLocal();return c.id}
+async function patchCuenta(id,p){if(db){await db.collection("cuentas").doc(id).update(p)}else{const c=cuentas.find(x=>x.id===id);Object.assign(c,p);saveLocal()}}
+const isPaid=s=>s.paid!==false&&!s.void;
+const payT=s=>s.tPaid||s.t;
+const paidIn=(list,a,b)=>list.filter(s=>isPaid(s)&&payT(s)>=a&&payT(s)<b);
+const openAccts=()=>cuentas.filter(c=>c.status==="abierta").sort((a,b)=>a.tOpen-b.tOpen);
+const acctOrders=id=>sales.filter(s=>s.cuenta===id&&!s.void).sort((a,b)=>a.t-b.t);
+const acctTotal=id=>Math.round(acctOrders(id).reduce((a,s)=>a+s.total,0)*100)/100;
+const cartTotal=()=>Math.round(Object.entries(cart).reduce((a,[f,q])=>a+q*config.prices[f],0)*100)/100;
+const nextNum=()=>Math.max(0,...sales.filter(s=>s.t>=dayStart()).map(s=>s.num||0))+1;
+function ask(msg,o={}){$("#askMsg").textContent=msg;const i=$("#askIn");i.hidden=!o.input;i.value="";i.placeholder=o.placeholder||"";$("#askYes").textContent=o.ok||"Aceptar";$("#askYes").className="btn "+(o.danger?"danger":"primary");$("#askBox").hidden=false;setTimeout(()=>(o.input?i:$("#askYes")).focus(),50);return new Promise(r=>askRes=r)}
+function askDone(v){$("#askBox").hidden=true;const r=askRes;askRes=null;if(r)r(v)}
+async function removeSale(id){if(db){await db.collection("ventas").doc(id).delete()}else{sales=sales.filter(s=>s.id!==id);saveLocal()}}
+async function saveConfig(){if(db)await db.doc("tienda/config").set(config);else saveLocal()}
+async function saveInv(){if(db)await db.doc("tienda/inventario").set(inv);else saveLocal()}
+async function saveCierre(k,v){if(db)await db.doc("cierres/"+k).set(v);else{cierres[k]=v;saveLocal()}}
+
+/* ---------- Utilidades ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money=n=>"$"+(Math.round((n||0)*100)/100).toFixed(2);
+const P=id=>PRODUCTS.find(p=>p.id===id)||{name:id,c:"#999",k:"emp"};
+const empU=s=>Object.entries(s.items||{}).reduce((a,[f,q])=>a+(P(f).k==="emp"?q:0),0);
+const bebU=s=>Object.entries(s.items||{}).reduce((a,[f,q])=>a+(P(f).k==="beb"?q:0),0);
+const dayStart=(d=new Date())=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()};
+const DAY=864e5;
+const dkey=ms=>{const d=new Date(ms);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const mmss=ms=>{ms=Math.max(0,ms);const t=Math.floor(ms/1000);return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
+const mins=ms=>(ms/60000).toFixed(1);
+function toast(msg,bad){const t=$("#toast");t.textContent=msg;t.classList.toggle("bad",!!bad);t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),2000)}
+function icon(p){return p.k==="emp"
+  ?`<svg class="dot" viewBox="0 0 38 28" aria-hidden="true"><path d="M2 25 A17 17 0 0 1 36 25 Z" fill="${p.c}"/><path d="M4 22 A15 15 0 0 1 34 22" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3" stroke-dasharray="2.5 2.5"/></svg>`
+  :`<svg class="dot" viewBox="0 0 38 28" aria-hidden="true"><path d="M12 4 h14 l-2 22 h-10 z" fill="${p.c}"/><rect x="11" y="2" width="16" height="3" rx="1.5" fill="${p.c}" opacity=".6"/><path d="M22 0 l4 -0" stroke="${p.c}"/><circle cx="17" cy="14" r="1.6" fill="rgba(255,255,255,.6)"/><circle cx="21" cy="19" r="1.2" fill="rgba(255,255,255,.6)"/></svg>`}
+
+/* Inventario: stock = base - vendido desde "since" */
+const produced=s=>!(s.void&&!s.tStart);
+function soldSince(id){return sales.reduce((a,s)=>a+(s.t>=inv.since&&produced(s)?(s.items?.[id]||0):0),0)}
+function stock(id){return Math.max(0,(inv.base[id]??50)-soldSince(id))}
+
+/* Aviso de pedidos nuevos en cocina */
+function beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)();[0,.18].forEach(d=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=880;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(.2,a.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d+.15);o.start(a.currentTime+d);o.stop(a.currentTime+d+.16)})}catch(e){}}
+function notifyNew(){
+  const pend=sales.filter(s=>s.status==="pendiente").map(s=>s.id);
+  if(seenPending&&tab==="cocina"&&pend.some(id=>!seenPending.has(id))){beep();toast("Nuevo pedido en cocina")}
+  seenPending=new Set(pend);
+}
+
+/* ---------- Datos de ejemplo ---------- */
+function genDemo(){
+  let seed=7;const r=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const w={ranchera:.3,pork:.22,hawaiana:.16,queso:.08,pollo:.24};
+  const bw={jamaica:.35,limonada:.25,coca:.2,aguasin:.12,aguacon:.08};
+  const pick=o=>{let x=r(),acc=0;for(const k in o){acc+=o[k];if(x<=acc)return k}return Object.keys(o)[0]};
+  const cooks=config.cooks.length?config.cooks:["Cocinero 1"];
+  const out=[];const today=dayStart();
+  for(let d=29;d>=0;d--){
+    const base=today-d*DAY;const dow=new Date(base).getDay();
+    const mult=dow===0?.6:dow===5||dow===6?1.4:1;
+    const n=Math.round((18+r()*10)*mult);let num=0;
+    for(let i=0;i<n;i++){
+      const h=r()<.45?12+r()*2:r()<.6?17+r()*2.5:10+r()*10;
+      const t=base+h*36e5;if(d===0&&t>Date.now())continue;
+      const items={};const k=1+Math.floor(r()*r()*4);
+      for(let j=0;j<k;j++){const f=pick(w);items[f]=(items[f]||0)+1}
+      if(r()<.45){const b=pick(bw);items[b]=(items[b]||0)+1}
+      const ci=Math.floor(r()*cooks.length);const speed=1+ci*.35;
+      const wait=(20+r()*120)*1000*(h>12&&h<14?2:1), prep=(150+r()*240)*1000*speed;
+      out.push({id:"d"+d+"_"+i,t,num:++num,items,total:Object.entries(items).reduce((a,[f,q])=>a+q*config.prices[f],0),pay:r()<.6?"efectivo":"transferencia",cashier:config.staff[Math.floor(r()*config.staff.length)].name,status:"entregado",cook:cooks[ci],tStart:t+wait,tReady:t+wait+prep,tDone:t+wait+prep+60000});
+    }
+  }
+  return out.sort((a,b)=>b.t-a.t);
+}
+const data=()=>demo?(demoSales||(demoSales=genDemo())):sales;
+
+/* ---------- Métricas ---------- */
+function range(p){const today=dayStart();if(p==="hoy")return[today,Date.now()+1,today-DAY,today];const n=p==="7"?7:30;const s=today-(n-1)*DAY;return[s,Date.now()+1,s-n*DAY,s]}
+function stats(list){
+  const by={};PRODUCTS.forEach(f=>by[f.id]=0);
+  let rev=0,u=0,b=0,profit=0,cash=0,withDrink=0;
+  list.forEach(s=>{rev+=s.total;if(s.pay==="efectivo")cash+=s.total;let hasB=false;
+    for(const[f,q]of Object.entries(s.items||{})){by[f]=(by[f]||0)+q;if(P(f).k==="emp")u+=q;else{b+=q;hasB=true}profit+=q*((config.prices[f]||0)-(config.costs[f]||0))}
+    if(hasB)withDrink++});
+  const n=list.length;
+  return{rev,u,b,profit,cash,tickets:n,avgU:n?u/n:0,avgT:n?rev/n:0,drinkRate:n?withDrink/n:0,by};
+}
+function hours(list){const h=Array(24).fill(0);list.forEach(s=>h[new Date(s.t).getHours()]+=empU(s));return h}
+function kitchen(list){
+  const done=list.filter(s=>s.tReady&&s.tStart&&s.cook);
+  const by={};
+  done.forEach(s=>{const c=by[s.cook]||(by[s.cook]={name:s.cook,n:0,prep:0,total:0,u:0});c.n++;c.prep+=s.tReady-s.tStart;c.total+=s.tReady-s.t;c.u+=empU(s)});
+  const cooks=Object.values(by).map(c=>({...c,avgPrep:c.prep/c.n,avgTotal:c.total/c.n})).sort((a,b)=>a.avgPrep-b.avgPrep);
+  const n=done.length;
+  return{n,avgTotal:n?done.reduce((a,s)=>a+s.tReady-s.t,0)/n:0,avgWait:n?done.reduce((a,s)=>a+s.tStart-s.t,0)/n:0,avgPrep:n?done.reduce((a,s)=>a+s.tReady-s.tStart,0)/n:0,cooks,late:done.filter(s=>s.tReady-s.t>config.target*60000).length};
+}
+
+const hfmt=ms=>{const m=Math.round(ms/60000);return Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")+" min"};
+const hdec=ms=>(ms/36e5).toFixed(1);
+const hm=t=>new Date(t).toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"});
+function genDemoShifts(){let seed=11;const r=()=>(seed=(seed*16807)%2147483647)/2147483647;const out=[];const today=dayStart();
+  const people=[...config.staff.map(s=>({name:s.name,role:"ventas",rol:s.rol==="admin"?"Administrador":"Cajero"})),...config.cooks.map(n=>({name:n,role:"cocina",rol:"Cocina"}))];
+  for(let d=29;d>=0;d--){const b=today-d*DAY;people.forEach((p,i)=>{const a=b+(9.5+r()*1.2+(i%2)*.5)*36e5;let e=b+(19+r()*1.8)*36e5;const open=d===0;if(open&&a>Date.now())return;
+    out.push({id:"ds"+d+"_"+i,...p,tIn:a,tOut:open?null:e})})}
+  return out.sort((a,b)=>b.tIn-a.tIn)}
+const shiftData=()=>demo?(demoShifts||(demoShifts=genDemoShifts())):turnos;
+function shiftsIn(s,e){const now=Date.now();return shiftData().map(t=>{const a=Math.max(t.tIn,s),b=Math.min(t.tOut||now,e);return b>a?{...t,ms:b-a,open:!t.tOut}:null}).filter(Boolean).sort((a,b)=>a.tIn-b.tIn)}
+function manHours(s,e){const m={};const list=shiftsIn(s,e);
+  list.forEach(t=>{const k=t.name+"|"+t.role;const c=m[k]||(m[k]={name:t.name,rol:t.rol,role:t.role,ms:0,n:0,first:t.tIn,last:0,open:false});c.ms+=t.ms;c.n++;c.first=Math.min(c.first,t.tIn);if(t.open)c.open=true;else c.last=Math.max(c.last,t.tOut)});
+  const people=Object.values(m).sort((a,b)=>b.ms-a.ms);const sum=f=>people.filter(f).reduce((a,b)=>a+b.ms,0);
+  return{list,people,total:sum(()=>true),cocina:sum(p=>p.role==="cocina"),ventas:sum(p=>p.role==="ventas")}}
+function mhBars(people){if(!people.length)return"";const mx=Math.max(...people.map(p=>p.ms),1);
+  return people.map(p=>`<div class="hbar"><span class="n">${esc(p.name)}<br><small class="m">${esc(p.rol)}</small></span><span class="t"><i style="width:${p.ms/mx*100}%;background:${p.role==="cocina"?"var(--naranja)":"var(--brasa)"}"></i></span><span class="x">${hdec(p.ms)} h${p.open?'<span class="live">En turno</span>':""}</span></div>`).join("")}
+const lostIn=(a,b)=>perdidas.filter(x=>x.t>=a&&x.t<b);
+function lostBy(a,b){const m={};lostIn(a,b).forEach(x=>m[x.p]=(m[x.p]||0)+1);return m}
+function projection(){
+  const now=new Date();const msOfDay=now-dayStart();const today=paidIn(sales,dayStart(),Infinity).reduce((a,s)=>a+s.total,0);
+  let fr=0,n=0;
+  for(let i=1;i<=14;i++){const ds=dayStart()-i*DAY;const l=paidIn(sales,ds,ds+DAY);const tot=l.reduce((a,s)=>a+s.total,0);if(tot<=0)continue;
+    fr+=l.filter(s=>payT(s)-ds<=msOfDay).reduce((a,s)=>a+s.total,0)/tot;n++}
+  if(n<3||today<=0)return null;const f=fr/n;if(f<.1)return null;if(f>.98)return{val:today,f};return{val:today/f,f}}
+function byCashier(list){const m={};list.forEach(s=>{const k=s.paidBy||s.cashier||"Sin nombre";const c=m[k]||(m[k]={name:k,n:0,rev:0});c.n++;c.rev+=s.total});return Object.values(m).sort((a,b)=>b.rev-a.rev)}
+function cashierBars(list){const cs=byCashier(list);if(!cs.length)return"";const mx=Math.max(...cs.map(c=>c.rev),1);
+  return cs.map(c=>`<div class="hbar"><span class="n">${esc(c.name)}</span><span class="t"><i style="width:${c.rev/mx*100}%;background:var(--brasa)"></i></span><span class="x">${money(c.rev)} <small class="m">${c.n} ped.</small></span></div>`).join("")}
+function recommendations(cur,prev,list,range0){
+  const R=[];
+  const lows=EMP.map(p=>({...p,s:stock(p.id)})).filter(p=>p.s<=10);
+  if(!demo&&lows.length) R.push({c:"var(--brasa)",e:"📦",t:"Queda poco: "+lows.map(p=>`${p.name} (${p.s})`).join(", "),p:"Hornea o repón antes de tu hora fuerte para no perder ventas."});
+  if(!demo&&range0){const lb=lostBy(range0[0],range0[1]);const tot=Object.values(lb).reduce((a,b)=>a+b,0);
+    if(tot){const top=Object.entries(lb).sort((a,b)=>b[1]-a[1])[0];R.push({c:"var(--brasa)",e:"🚫",t:`Perdiste ${tot} ${tot===1?"venta":"ventas"} por producto agotado (≈ ${money(Object.entries(lb).reduce((a,[p,q])=>a+q*config.prices[p],0))})`,p:`La más pedida sin stock fue ${P(top[0]).name} (${top[1]}). Hornea más de ese sabor o prepara una tanda antes de la hora fuerte.`})}}
+  if(period==="hoy"&&!demo){const pj=projection();if(pj&&pj.val<config.goal)R.push({c:"var(--naranja)",e:"📊",t:`Vas camino a cerrar en ${money(pj.val)}, bajo la meta de ${money(config.goal)}`,p:`Faltarían ${money(config.goal-pj.val)}. Ofrece el combo en caja y publica en redes antes de la próxima hora fuerte.`})}
+  if(!cur.tickets){R.push({c:"var(--chispa)",e:"🥟",t:"Todavía no hay ventas en este periodo",p:"Registra ventas en Vender y aquí verás qué hornear, a qué hora y qué empujar."});return R}
+  const ranked=EMP.map(f=>({...f,q:cur.by[f.id]})).sort((a,b)=>b.q-a.q);
+  const top=ranked[0],low=ranked[ranked.length-1];
+  const share=q=>cur.u?Math.round(q/cur.u*100):0;
+  const h=hours(list);const ph=h.indexOf(Math.max(...h));
+  if(h[ph]>0){const days=period==="hoy"?1:period==="7"?7:30;R.push({c:"var(--brasa)",e:"🔥",t:`Tu hora fuerte es de ${ph}:00 a ${ph+1}:00`,p:`Ten la vitrina llena a las ${Math.max(0,ph-1)}:30. Salen unas ${Math.ceil(h[ph]/days)} empanadas por día en esa hora.`})}
+  const k=kitchen(list);
+  if(k.n>=3){
+    if(k.avgTotal>config.target*60000) R.push({c:"var(--brasa)",e:"⏱️",t:`Los pedidos tardan ${mmss(k.avgTotal)} min en salir`,p:`Tu meta es ${config.target} min. ${k.late} pedidos se pasaron. Deja empanadas listas en la vitrina antes de la hora fuerte.`});
+    else R.push({c:"var(--good)",e:"⏱️",t:`La cocina va bien: ${mmss(k.avgTotal)} min por pedido`,p:`Dentro de tu meta de ${config.target} min.`});
+    if(k.cooks.length>1&&k.cooks[0].n>=3) R.push({c:"var(--good)",e:"🏅",t:`${esc(k.cooks[0].name)} es quien prepara más rápido (${mmss(k.cooks[0].avgPrep)} min)`,p:`Ponle en el turno de la hora fuerte y que comparta su método con el equipo.`});
+  }
+  R.push({c:top.c,e:"⭐",t:`${top.name} es tu favorita (${share(top.q)}% de las empanadas)`,p:"Que nunca falte en la vitrina. Si se agota, estás dejando ventas en la mesa."});
+  if(cur.u&&low.q/cur.u<.12) R.push({c:"var(--naranja)",e:"📉",t:`${low.name} se mueve poco (${share(low.q)}%)`,p:`Hornea menos o súmala a un combo con ${top.name} para darla a probar.`});
+  if(cur.drinkRate<.5){const tb=BEB.map(f=>({...f,q:cur.by[f.id]})).sort((a,b)=>b.q-a.q)[0];R.push({c:"#A0204C",e:"🥤",t:`Solo ${Math.round(cur.drinkRate*100)}% de los pedidos lleva bebida`,p:`Pregunta siempre al cobrar: "¿Le agrego una ${tb.q?tb.name:"Jamaica con piña"}?" Cada bebida suma ${money(config.prices.jamaica)}.`})}
+  if(cur.avgU<2.2) R.push({c:"var(--chispa)",e:"🧃",t:`Cada cliente lleva ${cur.avgU.toFixed(1)} empanadas en promedio`,p:"Ofrece un combo de 3 empanadas + bebida para subir el ticket."});
+  if(period==="hoy"){const falta=config.goal-cur.rev;
+    if(falta>0)R.push({c:"var(--pared)",e:"🎯",t:`Faltan ${money(falta)} para tu meta de hoy`,p:`Son unas ${Math.ceil(falta/1.5)} empanadas o bebidas más.`});
+    else R.push({c:"var(--good)",e:"🏆",t:"Meta del día cumplida",p:`Vas ${money(-falta)} por encima.`})}
+  const mg=EMP.map(p=>({...p,m:config.prices[p.id]?(config.prices[p.id]-config.costs[p.id])/config.prices[p.id]:0,q:cur.by[p.id]})).filter(p=>p.q).sort((a,b)=>a.m-b.m);
+  if(mg.length&&mg[0].m<.45&&mg[0].q/Math.max(1,cur.u)>=.15)R.push({c:"var(--naranja)",e:"💲",t:`${mg[0].name} vende bien pero deja poco margen (${Math.round(mg[0].m*100)}%)`,p:`Subir ${money(.25)} su precio sumaría ≈ ${money(.25*mg[0].q)} en este periodo, o revisa su costo.`});
+  if(period!=="hoy"){const w=weekdayAvg(list);const v=w.filter(x=>x.n);if(v.length>=5){const lo=v.reduce((a,b)=>b.avg<a.avg?b:a),hi=v.reduce((a,b)=>b.avg>a.avg?b:a);
+    if(lo.avg<hi.avg*.75)R.push({c:"var(--naranja)",e:"📅",t:`El ${lo.name} es tu día más flojo (${money(lo.avg)} vs. ${money(hi.avg)} el ${hi.name})`,p:"Haz una promo solo ese día, por ejemplo 2x1 en bebidas o combo especial, y mide el resultado la semana siguiente."})}}
+  if(prev.rev>0){const ch=(cur.rev-prev.rev)/prev.rev*100;
+    if(ch<=-10)R.push({c:"var(--brasa)",e:"⚠️",t:`Ventas ${Math.round(-ch)}% abajo vs. el periodo anterior`,p:"Revisa si faltó producto en la hora fuerte o haz una promo en redes."});
+    else if(ch>=10)R.push({c:"var(--good)",e:"📈",t:`Ventas ${Math.round(ch)}% arriba vs. el periodo anterior`,p:"Sube un poco la producción para no quedarte corto."})}
+  return R.slice(0,8);
+}
+const WD=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+function weekdayAvg(list){const sum=Array(7).fill(0),days=Array(7).fill(null).map(()=>new Set());list.forEach(s=>{const d=new Date(payT(s));sum[d.getDay()]+=s.total;days[d.getDay()].add(dkey(payT(s)))});return sum.map((v,i)=>({i,name:WD[i],n:days[i].size,avg:days[i].size?v/days[i].size:0}))}
+function productionPlan(all){
+  const s=dayStart()-7*DAY,e=dayStart();const list=all.filter(x=>x.t>=s&&x.t<e&&!x.void);
+  const days=new Set(list.map(x=>dayStart(new Date(x.t)))).size;if(!days)return null;
+  const st=stats(list);return EMP.map(f=>({...f,q:Math.ceil(st.by[f.id]/days*1.1)}));
+}
+
+/* ---------- Render ---------- */
+function render(){
+  const lo=$("#logout");document.body.classList.toggle("kitchen",role==="cocina");
+  if(!role){$("#nav").hidden=true;$("#paybar").hidden=true;lo.hidden=true;renderGate();return}
+  lo.hidden=false;lo.textContent=(role==="cocina"?"👨‍🍳 ":"💵 ")+(who||"")+"  Salir";lo.title=role==="cocina"?"Cocina":staffRol(who);
+  if(role==="cocina"){$("#nav").hidden=true;$("#paybar").hidden=true;tab="cocina";renderKitchen();return}
+  if(tab==="cocina")tab="vender";
+  $("#nav").hidden=false;
+  const oa=openAccts().length;const ap=$("#apill");ap.hidden=!oa;ap.textContent=oa;
+  const adm=isAdmin();document.querySelector('nav.tabs [data-tab="ajustes"]').hidden=!adm;if(tab==="ajustes"&&!adm)tab="vender";
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
+  ({vender:renderSell,cocina:renderKitchen,inventario:renderInv,caja:renderCaja,analisis:renderAnalysis,ajustes:renderSettings})[tab]();
+  if(tab!=="vender")$("#paybar").hidden=true;
+}
+
+function tileHTML(p){
+  const q=cart[p.id]||0;const st=p.k==="emp"?stock(p.id):null;const out=st===0;
+  return `<div class="cell"><button class="tile ${p.k==="beb"?"small":""} ${q?"on":""} ${out?"out":""}" style="--c:${p.c}" data-add="${p.id}" aria-label="Agregar ${p.name}">
+    ${icon(p)}
+    <div><div class="name">${p.name}</div><div class="price">${money(config.prices[p.id])}</div>
+    ${st!==null?`<div class="stock ${st<=10?"low":""}">${out?"Agotada":"Quedan "+st}</div>`:""}</div>
+    ${q?`<span class="badge">${q}</span>`:""}
+  </button>${q?`<button class="minus" data-minus="${p.id}" aria-label="Quitar ${p.name}">−</button>`:""}</div>`;
+}
+function acctBar(){
+  const now=Date.now();
+  return `<div class="accts" role="group" aria-label="Cuentas">
+    <button class="acc ${!acct?"on":""}" data-acct="">⚡ Venta rápida<small>Se cobra al momento</small></button>
+    ${openAccts().map(c=>{const m=Math.floor((now-c.tOpen)/60000);return `<button class="acc open ${acct===c.id?"on":""} ${m>=60?"old":""}" data-acct="${c.id}">${esc(c.name)}<small>${money(acctTotal(c.id))}, hace ${m<60?m+" min":Math.floor(m/60)+" h "+m%60+" min"}</small></button>`}).join("")}
+    <button class="acc add" id="newAcct">+ Abrir cuenta<small>Pagan al final</small></button>
+  </div>`;
+}
+function acctCard(){
+  const c=cuentas.find(x=>x.id===acct);if(!c)return"";
+  const ords=acctOrders(c.id);const tot=acctTotal(c.id);
+  return `<div class="acctcard">
+    <div class="top"><div><div class="nm">🧾 ${esc(c.name)}</div><small class="m">Abierta a las ${hm(c.tOpen)}${c.openedBy?" por "+esc(c.openedBy):""}</small></div><div class="tot">${money(tot)}</div></div>
+    <div style="margin:10px 0">${ords.length?ords.map((s,i)=>`<div class="round"><span class="rn">Ronda ${i+1}<br>${hm(s.t)}</span><span class="it">${itemsTxt(s)}<br><span class="tagp">${statusTxt(s)}</span></span><b>${money(s.total)}</b></div>`).join(""):`<p class="sub" style="margin:0">Cuenta vacía. Toca los productos y luego <b>Enviar a cocina</b>.</p>`}</div>
+    <div class="row2"><button class="btn danger" id="voidAcct">Anular cuenta</button><button class="btn primary" id="chargeAcct" ${ords.length?"":"disabled"}>Cobrar ${money(tot)}</button></div>
+  </div>`;
+}
+function renderCharge(){
+  const c=cuentas.find(x=>x.id===acct);if(!c){charging=false;return renderSell()}
+  const ords=acctOrders(c.id);const tot=acctTotal(c.id);const items={};
+  ords.forEach(s=>Object.entries(s.items).forEach(([f,q])=>items[f]=(items[f]||0)+q));
+  const inKitchen=ords.filter(s=>["pendiente","preparando","listo"].includes(s.status)).length;
+  const rec=parseFloat(received);const vuelto=rec-tot;
+  $("#app").innerHTML=`
+    <h2>Cobrar cuenta: ${esc(c.name)}</h2>
+    ${inKitchen?`<div class="warnbox"><b>${inKitchen} ${inKitchen===1?"pedido sigue":"pedidos siguen"} en cocina</b>Puedes cobrar igual; la cocina seguirá viéndolo hasta entregarlo.</div>`:""}
+    <div class="card"><div class="scroll"><table class="tbl"><thead><tr><th>Producto</th><th class="r">Cant.</th><th class="r">Subtotal</th></tr></thead><tbody>
+      ${Object.entries(items).map(([f,q])=>`<tr><td>${P(f).name}</td><td class="r">${q}</td><td class="r">${money(q*config.prices[f])}</td></tr>`).join("")}
+      <tr><td><b>Total (${ords.length} ${ords.length===1?"ronda":"rondas"})</b></td><td></td><td class="r"><b style="font-size:20px">${money(tot)}</b></td></tr></tbody></table></div></div>
+    <h3>Forma de pago</h3>
+    <div class="bigseg"><button data-cpay="efectivo" aria-pressed="${pay==="efectivo"}">💵 Efectivo</button><button data-cpay="transferencia" aria-pressed="${pay==="transferencia"}">📲 Transferencia</button></div>
+    ${pay==="efectivo"?`<div class="card"><label class="f" for="recv">Recibido (opcional, para calcular el vuelto)</label><input class="inp" id="recv" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(received)}" placeholder="0.00"><div id="vuelto" style="margin-top:8px">${received!==""&&!isNaN(rec)?(vuelto>=0?`<span class="m">Vuelto</span><div class="change">${money(vuelto)}</div>`:`<b class="down">Faltan ${money(-vuelto)}</b>`):""}</div></div>`:""}
+    <div class="stack"><button class="btn primary" style="font-size:18px;padding:16px" id="confirmPay">Confirmar pago de ${money(tot)}</button><button class="btn" id="backCharge">Volver a la cuenta</button></div>`;
+}
+function renderSell(){
+  if(charging&&acct){$("#paybar").hidden=true;return renderCharge()}
+  if(acct&&!cuentas.some(c=>c.id===acct&&c.status==="abierta"))acct=null;
+  const today=stats(paidIn(sales,dayStart(),Infinity));
+  const pct=Math.min(100,today.rev/config.goal*100);
+  const open=openAccts();const due=open.reduce((a,c)=>a+acctTotal(c.id),0);
+  $("#app").innerHTML=`
+    ${acctBar()}
+    ${newAcct?`<div class="card"><label class="f" for="acctName">Nombre del cliente o mesa</label><div class="addrow"><input class="inp" id="acctName" maxlength="30" placeholder="Ej. Mesa 3, Carlos" autocomplete="off"><button class="btn primary sm" id="createAcct">Abrir</button><button class="btn sm" id="cancelAcct">Cancelar</button></div></div>`:""}
+    ${acct?acctCard():`<div class="card"><label class="f" for="client">Cliente o mesa (opcional)</label><input class="inp" id="client" value="${esc(client)}" placeholder="Ej. Carlos" autocomplete="off"></div>`}
+    <div class="goal"><div class="row"><span>Hoy: ${money(today.rev)} (${today.u} empanadas, ${today.b} bebidas)</span><span>Meta ${money(config.goal)}</span></div><div class="bar"><i style="width:${pct}%"></i></div>${(()=>{const pj=projection();if(!pj)return"";const ok=pj.val>=config.goal;return `<div class="proj ${ok?"up":"down"}">${ok?"✅":"⚠️"} Al ritmo de tus últimos días cerrarías en ${money(pj.val)}${ok?"":", "+money(config.goal-pj.val)+" bajo la meta"}</div>`})()}${open.length?`<div class="row" style="margin-top:8px;color:var(--brasa)"><span>Por cobrar en cuentas abiertas</span><span>${money(due)}</span></div>`:""}</div>
+    <h2>Empanadas</h2>
+    <div class="grid">${EMP.map(tileHTML).join("")}</div>
+    <h2>Bebidas</h2>
+    <div class="grid">${BEB.map(tileHTML).join("")}</div>
+    <div style="height:14px"></div>
+    ${renderRecent()}`;
+  renderPaybar();
+}
+function renderRecent(){const t=sales.filter(s=>s.t>=dayStart()).slice(0,6);return t.length?`<div class="card"><h3>Últimas ventas de hoy</h3><div class="list">${t.map(saleRow).join("")}</div></div>`:""}
+function itemsTxt(s){return Object.entries(s.items).map(([f,q])=>`${q} ${P(f).name}`).join(", ")}
+function statusTxt(s){return{pendiente:"En cola",preparando:"En cocina",listo:"Listo",entregado:"Entregado",anulado:"Anulado"}[s.status]||""}
+function saleRow(s){
+  const d=new Date(s.t);
+  const payTxt=s.void?`<span class="tagp void">Anulado</span>`:s.paid===false?`<span class="tagp due">Por cobrar</span>`:(s.pay==="efectivo"?"Efectivo":"Transferencia");
+  return `<div class="sale"><span class="when">${d.toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"})}${s.num?`<br>#${s.num}`:""}</span><span class="what">${s.cuenta?`<b>${esc(s.client)}</b>: `:""}${itemsTxt(s)}<br><small class="m">${payTxt}${s.status?", "+statusTxt(s):""}${s.paidBy||(!s.cuenta&&s.cashier)?", cobró "+esc(s.paidBy||s.cashier):""}${s.cook?", cocinó "+esc(s.cook):""}</small></span><span class="amt">${money(s.total)}</span>${!demo&&isAdmin()&&!s.void?`<button data-del="${s.id}" aria-label="Anular venta" title="Anular venta">✕</button>`:""}</div>`;
+}
+function renderPaybar(){
+  const pb=$("#paybar");if(tab!=="vender"){pb.hidden=true;return}
+  const n=Object.values(cart).reduce((a,b)=>a+b,0);
+  const tot=Object.entries(cart).reduce((a,[f,q])=>a+q*config.prices[f],0);
+  pb.hidden=false;
+  if(acct){const c=cuentas.find(x=>x.id===acct);
+    pb.innerHTML=`<div class="paybox"><div><div class="tot">${money(tot)}</div><div class="cnt">${n} producto${n===1?"":"s"} para ${esc(c?c.name:"")}</div></div>
+    <button class="cta" id="sendAcct" style="margin-left:auto" ${n?"":"disabled"}>Enviar a cocina</button></div>`;return}
+  pb.innerHTML=`<div class="paybox"><div><div class="tot">${money(tot)}</div><div class="cnt">${n} producto${n===1?"":"s"}</div></div>
+    <div class="seg" role="group" aria-label="Forma de pago"><button data-pay="efectivo" aria-pressed="${pay==="efectivo"}">Efectivo</button><button data-pay="transferencia" aria-pressed="${pay==="transferencia"}">Transf.</button></div>
+    <button class="cta" id="cobrar" ${n?"":"disabled"}>Cobrar</button></div>`;
+}
+
+/* Cocina */
+function tClass(ms){const m=ms/60000;return m<config.target?"ok":m<config.target*1.5?"mid":"late"}
+function ticketHTML(s){
+  const now=Date.now();
+  const ref=s.status==="listo"?s.tReady:now;
+  const emp=Object.entries(s.items).filter(([f])=>P(f).k==="emp"), beb=Object.entries(s.items).filter(([f])=>P(f).k==="beb");
+  const btn=s.status==="pendiente"?`<button class="go" data-start="${s.id}">Empezar${myCook?" ("+esc(myCook)+")":""}</button>`
+    :s.status==="preparando"?`<button class="go ready" data-ready="${s.id}">Marcar listo</button>`
+    :`<button class="go deliver" data-deliver="${s.id}">Entregado</button>`;
+  return `<div class="ticket ${tClass(ref-s.t)}">
+    <div class="top"><span class="num">#${s.num||"?"}</span><span class="clock" ${s.status!=="listo"?`data-since="${s.t}"`:""}>${mmss(ref-s.t)}</span></div>
+    ${s.cuenta?`<div class="acctTag">🧾 ${esc(s.client)}${s.ronda>1?", ronda "+s.ronda:""}</div>`:""}
+    <div class="meta">${new Date(s.t).toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"})}${s.client&&!s.cuenta?", "+esc(s.client):""}${s.cook?`, cocina: <b>${esc(s.cook)}</b>`:""}${s.status==="listo"?`, preparó en ${mmss(s.tReady-s.tStart)}`:""}</div>
+    <ul>${emp.map(([f,q])=>`<li><b>${q}</b>${P(f).name}</li>`).join("")}${beb.map(([f,q])=>`<li style="color:var(--muted);font-size:15px"><b>${q}</b>${P(f).name}</li>`).join("")}</ul>
+    ${btn}</div>`;
+}
+function renderKitchen(){
+  const act=sales.filter(s=>!s.void&&["pendiente","preparando","listo"].includes(s.status)).sort((a,b)=>a.t-b.t);
+  const col=(st,title)=>{const l=act.filter(s=>s.status===st);return `<div class="kcol"><h3>${title}<span class="n">${l.length}</span></h3>${l.map(ticketHTML).join("")||`<p class="sub" style="margin:0">Nada por aquí.</p>`}</div>`};
+  const k=kitchen(sales.filter(s=>s.t>=dayStart()));
+  $("#app").innerHTML=`
+    <h2>Comandas</h2>
+    <div class="who"><span>¿Quién cocina en este equipo?</span>${config.cooks.map(c=>`<div class="chips" style="margin:0"><button data-cook="${esc(c)}" aria-pressed="${myCook===c}">${esc(c)}</button></div>`).join("")}</div>
+    ${(()=>{const t=turnos.find(x=>x.id===shiftId);return t?`<p class="sub" style="margin:-4px 0 12px">Tu turno empezó a las ${hm(t.tIn)} (${hfmt(Date.now()-t.tIn)}). Toca Salir al terminar para registrar la salida.</p>`:""})()}
+    ${k.n?`<div class="goal"><div class="row"><span>Hoy: ${k.n} pedidos listos, promedio ${mmss(k.avgTotal)} min</span><span>Meta ${config.target} min</span></div></div>`:""}
+    <div class="kcols">${col("pendiente","Nuevos")}${col("preparando","Preparando")}${col("listo","Listos para entregar")}</div>`;
+}
+
+/* Inventario */
+function renderInv(){
+  const today=stats(sales.filter(s=>s.t>=dayStart()&&!s.void));
+  const plan=productionPlan(sales);
+  $("#app").innerHTML=`
+    <h2>Inventario de empanadas</h2>
+    <p class="sub">Se descuenta solo con cada venta. Alerta cuando quedan 10 o menos.</p>
+    <div class="inv">${EMP.map(p=>{const s=stock(p.id);const cls=s===0?"zero":s<=10?"low":"ok";const avg=plan?plan.find(x=>x.id===p.id).q/1.1:0;
+      return `<div class="invc" style="--c:${p.c}">
+        <div class="row"><div><div style="font-weight:800">${p.name}</div><div class="big">${s}</div><small class="m">de ${config.stockMax} unidades, hoy vendidas ${today.by[p.id]}</small>${(lostBy(dayStart(),Infinity)[p.id]||0)?`<br><span class="lost">🚫 ${lostBy(dayStart(),Infinity)[p.id]} pedidos perdidos hoy por falta de stock</span>`:""}</div>
+        <span class="status ${cls}">${s===0?"Agotada":s<=10?"Stock bajo":"Bien"}</span></div>
+        <div class="bar"><i style="width:${Math.min(100,s/config.stockMax*100)}%;background:${p.c}"></i></div>
+        ${avg?`<small class="m">Alcanza para ${(s/avg).toFixed(1)} días según tus ventas</small>`:""}
+        <div class="act"><input class="inp" type="number" min="0" inputmode="numeric" data-invq="${p.id}" placeholder="Cantidad" aria-label="Cantidad ${p.name}">
+        <button class="btn sm dark" data-invadd="${p.id}">Sumar</button>${isAdmin()?`<button class="btn sm" data-invset="${p.id}">Ajustar</button>`:""}</div>
+      </div>`}).join("")}</div>
+    <div class="stack" style="margin-top:14px" ${isAdmin()?"":"hidden"}><button class="btn primary" id="refill">Reponer todas a ${config.stockMax} unidades</button></div>
+    <p class="sub" style="margin-top:12px">"Sumar" agrega lo que acabas de hornear. "Ajustar" pone el número exacto que contaste.</p>`;
+}
+async function setStock(changes){
+  const base={};EMP.forEach(p=>base[p.id]=stock(p.id));Object.assign(base,changes);
+  inv={base,since:Date.now()};await saveInv();
+}
+
+/* Caja y reporte */
+function dayData(ds){const list=paidIn(sales,ds,ds+DAY);const orders=sales.filter(s=>s.t>=ds&&s.t<ds+DAY&&!s.void);return{list,st:stats(list),k:kitchen(orders)}}
+function renderCaja(){
+  if(cajaDay===null)cajaDay=dayStart();
+  const key=dkey(cajaDay);const {list,st,k}=dayData(cajaDay);const c=cierres[key];
+  const isToday=cajaDay===dayStart();
+  const dateTxt=new Date(cajaDay).toLocaleDateString("es",{weekday:"long",day:"numeric",month:"long"});
+  const fondo=c?c.fondo:"",contado=c?c.contado:"";
+  const hist=Object.entries(cierres).sort((a,b)=>b[0]<a[0]?-1:1).slice(0,10);
+  $("#app").innerHTML=`
+    <h2>Cierre de caja</h2>
+    ${isToday&&openAccts().length?`<div class="warnbox"><b>⚠️ ${openAccts().length} ${openAccts().length===1?"cuenta sin cobrar":"cuentas sin cobrar"} por ${money(openAccts().reduce((a,c)=>a+acctTotal(c.id),0))}</b>${openAccts().map(c=>esc(c.name)).join(", ")}. ${openAccts().length===1?"Cóbrala o anúlala":"Cóbralas o anúlalas"} antes de cerrar la caja.<div style="margin-top:8px"><button class="btn sm dark" data-tab="vender">Ir a las cuentas</button></div></div>`:""}
+    <div class="daynav"><button data-day="-1" aria-label="Día anterior">‹</button><b>${dateTxt}</b><button data-day="1" aria-label="Día siguiente" ${isToday?"disabled":""}>›</button></div>
+    <div class="kpis">
+      <div class="kpi"><div class="v">${money(st.rev)}</div><div class="l">Ventas cobradas</div></div>
+      <div class="kpi"><div class="v">${money(st.cash)}</div><div class="l">En efectivo</div></div>
+      <div class="kpi"><div class="v">${money(st.rev-st.cash)}</div><div class="l">Transferencias</div></div>
+      <div class="kpi"><div class="v">${st.tickets}</div><div class="l">Pedidos</div></div>
+    </div>
+    <div class="card ${c?"closed":""}">
+      <h3>${c?"✅ Caja cerrada a las "+new Date(c.closedAt).toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"})+(c.closedBy?" por "+esc(c.closedBy):""):"Contar el efectivo"}</h3>
+      <div class="row2">
+        <div><label class="f" for="fondo">Fondo inicial (cambio)</label><input class="inp" id="fondo" type="number" step="0.01" min="0" inputmode="decimal" value="${fondo}" placeholder="0.00"></div>
+        <div><label class="f" for="contado">Efectivo contado</label><input class="inp" id="contado" type="number" step="0.01" min="0" inputmode="decimal" value="${contado}" placeholder="0.00"></div>
+      </div>
+      <div style="margin-top:12px" id="cuadre"></div>
+      <div class="stack" style="margin-top:12px"><button class="btn primary" id="cerrar">${c?"Actualizar cierre":"Cerrar caja"}</button></div>
+    </div>
+    <div class="card"><h3>Reporte del día</h3>
+      <div class="scroll"><table class="tbl"><thead><tr><th>Producto</th><th class="r">Cant.</th><th class="r">Total</th></tr></thead><tbody>
+      ${PRODUCTS.filter(p=>st.by[p.id]).map(p=>`<tr><td>${p.name}</td><td class="r">${st.by[p.id]}</td><td class="r">${money(st.by[p.id]*config.prices[p.id])}</td></tr>`).join("")||`<tr><td colspan="3" style="color:var(--muted)">Sin ventas este día.</td></tr>`}
+      <tr><td><b>Total</b></td><td class="r"><b>${st.u+st.b}</b></td><td class="r"><b>${money(st.rev)}</b></td></tr></tbody></table></div>
+      ${list.some(s=>s.cashier)?`<h3 style="margin-top:14px">Cajeros</h3>${cashierBars(list)}`:""}
+      <p style="margin:10px 0 0;font-size:14px">Ganancia estimada: <b>${money(st.profit)}</b>. Ticket promedio: <b>${money(st.avgT)}</b>.</p>
+      ${k.n?`<h3 style="margin-top:14px">Cocina</h3><p style="margin:0 0 6px;font-size:14px">Promedio por pedido: <b>${mmss(k.avgTotal)} min</b> (espera ${mmss(k.avgWait)}, preparación ${mmss(k.avgPrep)}).</p>
+        ${k.cooks.map((c,i)=>`<div class="hbar"><span class="n">${i===0?"🏅 ":""}${esc(c.name)}</span><span class="t"><i style="width:${Math.min(100,c.avgPrep/(k.cooks[k.cooks.length-1].avgPrep||1)*100)}%;background:${i===0?"var(--good)":"var(--naranja)"}"></i></span><span class="x">${mmss(c.avgPrep)} <small class="m">${c.n} ped.</small></span></div>`).join("")}`:""}
+      <div class="row2" style="margin-top:14px"><button class="btn dark" id="preview">Ver reporte ejecutivo</button><button class="btn" id="dlcsv" ${list.length?"":"disabled"}>Ventas en Excel (CSV)</button></div>
+    </div>
+    ${(()=>{const M=manHours(cajaDay,cajaDay+DAY);const st2=st;
+      return `<div class="card"><h3>Horas hombre del día</h3>
+      ${M.list.length?`<div class="kpis" style="margin-bottom:8px"><div class="kpi"><div class="v">${hdec(M.total)}</div><div class="l">Horas totales</div></div><div class="kpi"><div class="v">${hdec(M.cocina)}</div><div class="l">Horas cocina</div></div><div class="kpi"><div class="v">${hdec(M.ventas)}</div><div class="l">Horas caja y admin.</div></div><div class="kpi"><div class="v">${M.total>=9e5?money(st2.rev/(M.total/36e5)):"—"}</div><div class="l">Ventas por hora hombre</div></div></div>
+      <div class="list">${M.list.map(t=>`<div class="shift"><span class="nm"><b>${esc(t.name)}</b> <small class="m">${esc(t.rol)}</small><br><small class="m">Entrada ${hm(t.tIn)}, salida ${t.open?"pendiente":hm(t.tOut)}</small></span><span class="hh">${hfmt(t.ms)}${t.open?'<span class="live">En turno</span>':""}</span>${t.open&&!demo&&t.id!==shiftId&&isAdmin()?`<button class="btn sm" data-endshift="${t.id}">Cerrar turno</button>`:""}</div>`).join("")}</div>`
+      :`<p class="sub" style="margin:0">Todavía no hay turnos registrados este día. El turno empieza cuando alguien entra con su nombre y termina cuando toca Salir.</p>`}</div>`})()}
+    ${hist.length?`<div class="card"><h3>Cierres anteriores</h3><div class="scroll"><table class="tbl"><thead><tr><th>Fecha</th><th class="r">Ventas</th><th class="r">Diferencia</th></tr></thead><tbody>
+      ${hist.map(([d,v])=>`<tr><td>${d}</td><td class="r">${money(v.ventas)}</td><td class="r ${Math.abs(v.diferencia)<.01?"up":"down"}"><b>${v.diferencia>=0?"+":""}${money(v.diferencia).replace("$-","-$")}</b></td></tr>`).join("")}</tbody></table></div></div>`:""}`;
+  updateCuadre();
+}
+function updateCuadre(){
+  const el=$("#cuadre");if(!el)return;const {st}=dayData(cajaDay);
+  const f=parseFloat($("#fondo").value)||0, c=$("#contado").value;
+  const esperado=f+st.cash;
+  if(c===""){el.innerHTML=`<p style="margin:0;font-size:14px">Debe haber en caja: <b>${money(esperado)}</b> (fondo ${money(f)} + ventas en efectivo ${money(st.cash)}).</p>`;return}
+  const d=(parseFloat(c)||0)-esperado;const ok=Math.abs(d)<.01;
+  el.innerHTML=`<div style="font-size:14px">Esperado: <b>${money(esperado)}</b></div>
+    <div class="diff ${ok?"up":"down"}">${ok?"Caja cuadrada":d>0?"Sobran "+money(d):"Faltan "+money(-d)}</div>`;
+}
+function csvFor(ds){
+  const {list}=dayData(ds);
+  const q=v=>`"${String(v).replace(/"/g,'""')}"`;
+  const rows=[["Pedido","Hora","Cliente","Productos","Empanadas","Bebidas","Pago","Total","Cajero","Cocinero","Espera (min)","Preparación (min)","Total cocina (min)"]];
+  list.slice().sort((a,b)=>a.t-b.t).forEach(s=>rows.push([s.num||"",new Date(s.t).toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"}),s.client||"",itemsTxt(s),empU(s),bebU(s),s.pay,s.total.toFixed(2),s.cashier||"",s.cook||"",s.tStart?mins(s.tStart-s.t):"",s.tReady&&s.tStart?mins(s.tReady-s.tStart):"",s.tReady?mins(s.tReady-s.t):""]));
+  return "\uFEFF"+rows.map(r=>r.map(q).join(",")).join("\n");
+}
+function reportFor(ds){
+  const {list,st,k}=dayData(ds);const key=dkey(ds);const c=cierres[key];
+  const dateTxt=new Date(ds).toLocaleDateString("es",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const h=hours(list);
+  const row=(a,b,cl="")=>`<tr><td>${a}</td><td class="r ${cl}">${b}</td></tr>`;
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reporte Empanadictos ${key}</title>
+<style>body{font-family:system-ui,sans-serif;color:#2A1C1E;max-width:720px;margin:0 auto;padding:24px;background:#fff}header{background:#1C1315;color:#fff;border-radius:16px;padding:18px 20px;margin-bottom:18px}h1{margin:0;font-size:26px;color:#FFC93C}h2{font-size:17px;border-bottom:3px solid #D62839;padding-bottom:4px;margin-top:26px}table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:7px 4px;border-bottom:1px solid #EBD5C4;text-align:left}.r{text-align:right}.k{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.k div{background:#FFF7EE;border:2px solid #EBD5C4;border-radius:12px;padding:10px}.k b{display:block;font-size:20px}.good{color:#2E9E62}.bad{color:#D62839}@media print{body{padding:0}}</style></head><body>
+<header><h1>Empanadictos</h1><div>Reporte de ventas del ${dateTxt}</div></header>
+<div class="k"><div><b>${money(st.rev)}</b>Ventas</div><div><b>${st.tickets}</b>Pedidos</div><div><b>${st.u}</b>Empanadas</div><div><b>${st.b}</b>Bebidas</div></div>
+<h2>Cierre de caja</h2><table>${c?row("Fondo inicial",money(c.fondo))+row("Ventas en efectivo",money(c.efectivo))+row("Esperado en caja",money(c.esperado))+row("Efectivo contado",money(c.contado))+row("Diferencia",(c.diferencia>=0?"+":"-")+money(Math.abs(c.diferencia)),Math.abs(c.diferencia)<.01?"good":"bad")+row("Hora de cierre",new Date(c.closedAt).toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"}))+(c.closedBy?row("Cerrado por",esc(c.closedBy)):""):row("Estado","Caja sin cerrar")}
+${row("Transferencias",money(st.rev-st.cash))}${row("Ganancia estimada",money(st.profit))}${row("Ticket promedio",money(st.avgT))}</table>
+<h2>Ventas por producto</h2><table><tr><th>Producto</th><th class="r">Cantidad</th><th class="r">Total</th></tr>${PRODUCTS.filter(p=>st.by[p.id]).map(p=>`<tr><td>${p.name}</td><td class="r">${st.by[p.id]}</td><td class="r">${money(st.by[p.id]*config.prices[p.id])}</td></tr>`).join("")}<tr><td><b>Total</b></td><td class="r"><b>${st.u+st.b}</b></td><td class="r"><b>${money(st.rev)}</b></td></tr></table>
+${byCashier(list).length?`<h2>Ventas por cajero</h2><table><tr><th>Cajero</th><th class="r">Pedidos</th><th class="r">Total</th></tr>${byCashier(list).map(c=>`<tr><td>${esc(c.name)}</td><td class="r">${c.n}</td><td class="r">${money(c.rev)}</td></tr>`).join("")}</table>`:""}
+<h2>Empanadas por hora</h2><table>${h.map((v,i)=>v?row(i+":00",v):"").join("")}</table>
+${k.n?`<h2>Tiempos de cocina</h2><table>${row("Promedio total por pedido",mmss(k.avgTotal)+" min")}${row("Espera antes de empezar",mmss(k.avgWait)+" min")}${row("Preparación",mmss(k.avgPrep)+" min")}${row("Pedidos sobre la meta de "+config.target+" min",k.late)}</table>
+<table style="margin-top:10px"><tr><th>Cocinero</th><th class="r">Pedidos</th><th class="r">Preparación promedio</th></tr>${k.cooks.map((c,i)=>`<tr><td>${i===0?"🏅 ":""}${esc(c.name)}</td><td class="r">${c.n}</td><td class="r">${mmss(c.avgPrep)} min</td></tr>`).join("")}</table>`:""}
+<h2>Detalle de pedidos</h2><table><tr><th>#</th><th>Hora</th><th>Productos</th><th>Pago</th><th class="r">Total</th></tr>${list.slice().sort((a,b)=>a.t-b.t).map(s=>`<tr><td>${s.num||""}</td><td>${new Date(s.t).toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"})}</td><td>${itemsTxt(s)}</td><td>${s.pay==="efectivo"?"Efectivo":"Transf."}</td><td class="r">${money(s.total)}</td></tr>`).join("")}</table>
+</body></html>`;
+}
+function execReport(ds,forPdf){
+  const {list,st,k}=dayData(ds);const key=dkey(ds);const c=cierres[key];
+  const prevD=dayData(ds-DAY).st, wk=dayData(ds-7*DAY).st;
+  const M=manHours(ds,ds+DAY);
+  const dateTxt=new Date(ds).toLocaleDateString("es",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const cmp=(a,b,lbl)=>{if(!b)return`<div class="d">Sin datos ${lbl}</div>`;const p=Math.round((a-b)/b*100);return`<div class="d ${p>=0?"up":"dn"}">${p>=0?"▲":"▼"} ${Math.abs(p)}% ${lbl}</div>`};
+  const margin=st.rev?Math.round(st.profit/st.rev*100):0;
+  const h=hours(list);const ph=h.indexOf(Math.max(...h));const hs=h.slice(8,23);const mh=Math.max(1,...hs);
+  const ranked=PRODUCTS.map(p=>({...p,q:st.by[p.id],v:st.by[p.id]*config.prices[p.id]})).filter(p=>p.q).sort((a,b)=>b.v-a.v);
+  const topE=EMP.map(p=>({...p,q:st.by[p.id]})).sort((a,b)=>b.q-a.q)[0];
+  const vph=M.total?st.rev/(M.total/36e5):0;
+  const HL=[];
+  const dd=prevD.rev?Math.round((st.rev-prevD.rev)/prevD.rev*100):null;
+  HL.push(`Se vendieron <b>${money(st.rev)}</b> en <b>${st.tickets} ${st.tickets===1?"pedido":"pedidos"}</b>${dd!==null?`, ${dd>=0?"<span class=up>"+dd+"% más</span>":"<span class=dn>"+(-dd)+"% menos</span>"} que el día anterior`:""}.`);
+  if(topE&&topE.q)HL.push(`El sabor más vendido fue <b>${topE.name}</b> con ${topE.q} unidades (${st.u?Math.round(topE.q/st.u*100):0}% de las empanadas).`);
+  if(h[ph])HL.push(`La hora de mayor venta fue de <b>${ph}:00 a ${ph+1}:00</b>, con ${h[ph]} empanadas.`);
+  HL.push(`El <b>${Math.round(st.drinkRate*100)}%</b> de los pedidos incluyó bebida. Ganancia estimada: <b>${money(st.profit)}</b> (margen ${margin}%).`);
+  if(k.n)HL.push(`La cocina entregó cada pedido en <b>${mmss(k.avgTotal)} min</b> en promedio (meta ${config.target} min)${k.cooks.length?`; la preparación más rápida fue de <b>${esc(k.cooks[0].name)}</b> (${mmss(k.cooks[0].avgPrep)} min)`:""}.`);
+  if(M.total>=9e5)HL.push(`Se trabajaron <b>${hdec(M.total)} horas hombre</b>, con una productividad de <b>${money(vph)} en ventas por hora hombre</b>.`);
+  HL.push(c?(Math.abs(c.diferencia)<.01?`La caja cerró <b class=up>cuadrada</b>${c.closedBy?" (cerró "+esc(c.closedBy)+")":""}.`:`La caja cerró con <b class=dn>${c.diferencia>0?"sobrante":"faltante"} de ${money(Math.abs(c.diferencia))}</b>${c.closedBy?" (cerró "+esc(c.closedBy)+")":""}.`):`La caja de este día <b class=dn>no tiene cierre registrado</b>.`);
+  const dayAccts=cuentas.filter(a=>a.tOpen>=ds&&a.tOpen<ds+DAY);
+  const accOpen=dayAccts.filter(a=>a.status==="abierta"),accVoid=dayAccts.filter(a=>a.status==="anulada"),accPaid=dayAccts.filter(a=>a.status==="cobrada");
+  const voidTot=sales.filter(s=>s.void&&s.t>=ds&&s.t<ds+DAY).reduce((a,s)=>a+s.total,0);
+  if(accOpen.length)HL.push(`<b class=dn>${accOpen.length} ${accOpen.length===1?"cuenta quedó":"cuentas quedaron"} sin cobrar por ${money(accOpen.reduce((a,c)=>a+acctTotal(c.id),0))}</b> (${accOpen.map(a=>esc(a.name)).join(", ")}).`);
+  const lb=lostBy(ds,ds+DAY);const lt=Object.values(lb).reduce((a,b)=>a+b,0);
+  if(lt)HL.push(`${lt===1?"Se perdió":"Se perdieron"} <b class=dn>${lt} ${lt===1?"venta":"ventas"} por producto agotado</b> (≈ ${money(Object.entries(lb).reduce((a,[p,q])=>a+q*config.prices[p],0))}), sobre todo ${P(Object.entries(lb).sort((a,b)=>b[1]-a[1])[0][0]).name}.`);
+  const vs=sales.filter(s=>s.void&&!s.cuenta&&(s.tVoid||s.t)>=ds&&(s.tVoid||s.t)<ds+DAY);
+  if(vs.length)HL.push(`${vs.length===1?"Se anuló":"Se anularon"} <b class=dn>${vs.length} ${vs.length===1?"venta":"ventas"}</b> por ${money(vs.reduce((a,s)=>a+s.total,0))} (${vs.map(s=>"#"+s.num+(s.voidReason?": "+esc(s.voidReason):"")+(s.voidBy?", "+esc(s.voidBy):"")).join("; ")}).`);
+  if(accVoid.length)HL.push(`Se ${accVoid.length===1?"anuló 1 cuenta":"anularon "+accVoid.length+" cuentas"} por <b class=dn>${money(voidTot)}</b> en producto entregado sin cobro.`);
+  const saved=period;period="hoy";const recs=recommendations(st,prevD,list,[ds,ds+DAY]).filter(r=>r.e!=="🎯"&&r.e!=="🏆"&&r.e!=="🥟"&&r.e!=="📊").slice(0,4);period=saved;
+  const row=(a,b,cl="")=>`<tr><td>${a}</td><td class="r ${cl}">${b}</td></tr>`;
+  return `<div class="rep${forPdf?" pdf":""}">
+  <div class="hd"><div><div class="brand">Empanadictos</div><div class="tag">Una adicción legal</div></div>
+    <div class="ttl"><b>Reporte ejecutivo de ventas</b>${dateTxt}<br>Generado ${new Date().toLocaleString("es",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}${who?" por "+esc(who):""}</div></div>
+  <section class="avoid"><h4>Resumen del día</h4>
+  <div class="kp">
+    <div><div class="v">${money(st.rev)}</div><div class="l">Ventas totales</div>${cmp(st.rev,prevD.rev,"vs. ayer")}${cmp(st.rev,wk.rev,"vs. hace 7 días")}</div>
+    <div><div class="v">${st.tickets}</div><div class="l">Pedidos</div>${cmp(st.tickets,prevD.tickets,"vs. ayer")}</div>
+    <div><div class="v">${money(st.avgT)}</div><div class="l">Ticket promedio</div>${cmp(st.avgT,prevD.avgT,"vs. ayer")}</div>
+    <div><div class="v">${money(st.profit)}</div><div class="l">Ganancia estimada</div><div class="d">Margen ${margin}%</div></div>
+    <div><div class="v">${st.u} / ${st.b}</div><div class="l">Empanadas / bebidas</div>${cmp(st.u,prevD.u,"empanadas vs. ayer")}</div>
+    <div><div class="v">${M.total>=9e5?money(vph):"—"}</div><div class="l">Ventas por hora hombre</div><div class="d">${hdec(M.total)} horas trabajadas</div></div>
+  </div></section>
+  <section class="avoid"><h4>Lo más importante</h4><ul class="hl">${HL.map(x=>`<li>${x}</li>`).join("")}</ul></section>
+  <section class="avoid"><h4>Ventas por producto</h4>
+  <table><tr><th>Producto</th><th class="r">Unid.</th><th class="r">Ventas</th><th class="r">Part.</th><th style="width:28%"></th></tr>
+  ${ranked.map(p=>`<tr><td>${p.name}</td><td class="r">${p.q}</td><td class="r">${money(p.v)}</td><td class="r">${st.rev?Math.round(p.v/st.rev*100):0}%</td><td><div class="bar"><i style="width:${ranked[0].v?p.v/ranked[0].v*100:0}%;background:${p.c}"></i></div></td></tr>`).join("")}
+  <tr><td><b>Total</b></td><td class="r"><b>${st.u+st.b}</b></td><td class="r"><b>${money(st.rev)}</b></td><td class="r">100%</td><td></td></tr></table></section>
+  <section class="two avoid">
+    <div><h4>Empanadas por hora</h4><div class="hrs">${hs.map((v,i)=>`<div class="${i+8===ph&&v?"pk":""}">${v?`<em>${v}</em>`:""}<i style="height:${v/mh*100}%"></i><span>${i+8}</span></div>`).join("")}</div></div>
+    <div><h4>Cierre de caja</h4><table>${c?row("Fondo inicial",money(c.fondo))+row("Ventas en efectivo",money(c.efectivo))+row("Transferencias",money(c.transferencias))+row("Esperado en caja",money(c.esperado))+row("Efectivo contado",money(c.contado))+row("Diferencia",(c.diferencia>=0?"+":"-")+money(Math.abs(c.diferencia)),Math.abs(c.diferencia)<.01?"up":"dn")+row("Cerrado por",esc(c.closedBy||"—")+" a las "+hm(c.closedAt)):row("Efectivo",money(st.cash))+row("Transferencias",money(st.rev-st.cash))+row("Estado","Sin cierre","dn")}</table></div>
+  </section>
+  ${dayAccts.length?`<section class="avoid"><h4>Cuentas abiertas (pago al final)</h4><table><tr><th>Cuenta</th><th>Apertura</th><th>Estado</th><th class="r">Monto</th></tr>
+  ${dayAccts.slice().sort((a,b)=>a.tOpen-b.tOpen).map(a=>`<tr><td>${esc(a.name)}</td><td>${hm(a.tOpen)}</td><td class="${a.status==="cobrada"?"up":"dn"}">${a.status==="cobrada"?"Cobrada"+(a.pay?" ("+(a.pay==="efectivo"?"efectivo":"transf.")+")":""):a.status==="anulada"?"Anulada"+(a.reason?": "+esc(a.reason):""):"Sin cobrar"}</td><td class="r">${money(a.status==="anulada"?(a.voidTotal||0):a.status==="cobrada"?(a.total||0):acctTotal(a.id))}</td></tr>`).join("")}
+  <tr><td colspan="3"><b>Cobradas ${accPaid.length}, sin cobrar ${accOpen.length}, anuladas ${accVoid.length}</b></td><td></td></tr></table></section>`:""}
+  <section class="avoid"><h4>Equipo y horas hombre</h4>
+  ${M.people.length?`<table><tr><th>Nombre</th><th>Rol</th><th>Entrada</th><th>Salida</th><th class="r">Horas</th><th class="r">Resultado</th></tr>
+  ${M.people.map(p=>{const cs=p.role==="cocina"?(k.cooks.find(x=>x.name===p.name)):null;const ca=p.role==="ventas"?byCashier(list).find(x=>x.name===p.name):null;
+    return `<tr><td>${esc(p.name)}</td><td>${esc(p.rol)}</td><td>${hm(p.first)}</td><td>${p.open?"En turno":hm(p.last)}</td><td class="r"><b>${hdec(p.ms)}</b></td><td class="r">${cs?cs.n+" ped., "+mmss(cs.avgPrep)+" min":ca?money(ca.rev)+" cobrado":"—"}</td></tr>`}).join("")}
+  <tr><td colspan="4"><b>Total horas hombre</b> (cocina ${hdec(M.cocina)} h, caja y administración ${hdec(M.ventas)} h)</td><td class="r"><b>${hdec(M.total)}</b></td><td></td></tr></table>
+  ${M.people.some(p=>p.open)?`<div class="note">Los turnos "En turno" siguen abiertos y se cuentan hasta la hora de este reporte.</div>`:""}`:`<p>No hay turnos registrados este día.</p>`}</section>
+  ${k.n?`<section class="avoid"><h4>Desempeño de cocina</h4><table>${row("Tiempo promedio por pedido",mmss(k.avgTotal)+" min")}${row("Espera antes de empezar",mmss(k.avgWait)+" min")}${row("Preparación",mmss(k.avgPrep)+" min")}${row("Pedidos sobre la meta de "+config.target+" min",k.late+" de "+k.n,k.late?"dn":"up")}</table></section>`:""}
+  ${recs.length?`<section class="avoid"><h4>Recomendaciones</h4>${recs.map(r=>`<div class="rc" style="border-left-color:${/^#/.test(r.c)?r.c:"#D62839"}"><b>${r.e} ${r.t}</b>${r.p}</div>`).join("")}</section>`:""}
+  <div class="ft">Empanadictos, reporte generado automáticamente. Los costos y la ganancia son estimados según los valores cargados en Ajustes.</div>
+  </div>`;
+}
+function waText(ds){
+  const {st,k}=dayData(ds);const c=cierres[dkey(ds)];const M=manHours(ds,ds+DAY);
+  const top=EMP.map(p=>({...p,q:st.by[p.id]})).sort((a,b)=>b.q-a.q)[0];
+  const oa=cuentas.filter(a=>a.status==="abierta"&&a.tOpen>=ds&&a.tOpen<ds+DAY);
+  const L=[`*Empanadictos: reporte del ${new Date(ds).toLocaleDateString("es",{weekday:"long",day:"numeric",month:"long"})}*`,"",
+    `💵 Ventas: ${money(st.rev)} (${st.tickets} ${st.tickets===1?"pedido":"pedidos"})`,
+    `🎟️ Ticket promedio: ${money(st.avgT)}`,
+    `🥟 Empanadas: ${st.u}  |  🥤 Bebidas: ${st.b}`,
+    `📈 Ganancia estimada: ${money(st.profit)}`];
+  if(top&&top.q)L.push(`⭐ Más vendida: ${top.name} (${top.q})`);
+  if(k.n)L.push(`⏱️ Cocina: ${mmss(k.avgTotal)} min por pedido (meta ${config.target})`);
+  if(M.total>=9e5)L.push(`👥 Horas hombre: ${hdec(M.total)} h (${money(st.rev/(M.total/36e5))} por hora)`);
+  L.push(c?(Math.abs(c.diferencia)<.01?"🧾 Caja: cuadrada":`🧾 Caja: ${c.diferencia>0?"sobrante":"faltante"} de ${money(Math.abs(c.diferencia))}`):"🧾 Caja: sin cierre");
+  if(oa.length)L.push(`⚠️ Cuentas sin cobrar: ${oa.length} por ${money(oa.reduce((a,x)=>a+acctTotal(x.id),0))}`);
+  return L.join("\n");
+}
+function openWa(){const a=document.createElement("a");a.href="https://wa.me/?text="+encodeURIComponent(waText(cajaDay));a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()}
+function canShareFiles(){try{return !!(navigator.canShare&&navigator.canShare({files:[new File(["x"],"t.pdf",{type:"application/pdf"})]}))}catch(e){return false}}
+async function onShare(btn){
+  if(shareFile){
+    const f=shareFile;
+    try{await navigator.share({files:[f],title:"Reporte Empanadictos",text:waText(cajaDay)});shareFile=null;btn.classList.remove("ready");btn.textContent="Compartir por WhatsApp"}
+    catch(e){if(e&&e.name==="AbortError")return;shareFile=null;btn.classList.remove("ready");btn.textContent="Compartir por WhatsApp";openWa();toast("Se abrió WhatsApp con el resumen. Adjunta el PDF descargado.")}
+    return;
+  }
+  if(!canShareFiles()){openWa();toast("Se abrió WhatsApp con el resumen. Para enviar el PDF, descárgalo y adjúntalo.");return}
+  btn.disabled=true;btn.textContent="Preparando PDF…";
+  try{const {blob,name}=await genPdf();shareFile=new File([blob],name,{type:"application/pdf"});btn.classList.add("ready");btn.textContent="Toca otra vez para enviar el PDF"}
+  catch(e){btn.textContent="Compartir por WhatsApp";toast("No se pudo preparar el PDF",true)}
+  btn.disabled=false;
+}
+function openPreview(){shareFile=null;const sb=$("#share");sb.classList.remove("ready");sb.textContent="Compartir por WhatsApp";$("#repView").innerHTML=execReport(cajaDay);$("#modal").hidden=false;document.body.style.overflow="hidden"}
+function closePreview(){$("#modal").hidden=true;document.body.style.overflow=""}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+async function pdfLib(){if(window.html2pdf)return;try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js")}catch(e){await loadScript("https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js")}}
+async function genPdf(){
+    await pdfLib();
+    const name=`reporte-ejecutivo-empanadictos-${dkey(cajaDay)}.pdf`;
+    const html=`<style>${$("#repcss").textContent}</style>`+execReport(cajaDay,true);
+    const sy=window.scrollY;window.scrollTo(0,0);
+    const blob=await window.html2pdf().set({margin:[8,8,10,8],filename:name,image:{type:"jpeg",quality:.95},html2canvas:{scale:2,backgroundColor:"#ffffff",useCORS:true,scrollX:0,scrollY:0},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"],avoid:[".avoid"]}}).from(html).outputPdf("blob");
+    return {blob,name};
+}
+async function makePdf(btn){
+  const old=btn.textContent;btn.disabled=true;btn.textContent="Generando PDF…";
+  try{const {blob,name}=await genPdf();await download(name,blob,"application/pdf");
+  }catch(e){toast("No se pudo generar el PDF. Revisa tu conexión e intenta de nuevo.",true)}
+  btn.disabled=false;btn.textContent=old;
+}
+async function download(filename,content,mime){
+  if(dl){try{await dl.save({filename,data:content});return}catch(e){if(e&&e.code==="declined")return;toast("No se pudo descargar",true);return}}
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type:mime}));a.download=filename;a.click()}catch(e){toast("La descarga no está disponible aquí",true)}
+}
+
+/* Análisis */
+function renderAnalysis(){
+  const all=data();const [s,e,ps,pe]=range(period);
+  const list=paidIn(all,s,e),prevL=paidIn(all,ps,pe);
+  const cur=stats(list),prev=stats(prevL);const recs=recommendations(cur,prev,list,[s,e]);const k=kitchen(list);
+  const delta=(a,b)=>{if(!b)return"";const c=Math.round((a-b)/b*100);return`<div class="d ${c>=0?"up":"down"}">${c>=0?"▲":"▼"} ${Math.abs(c)}% vs. antes</div>`};
+  const bars=(arr,total)=>{const mx=Math.max(1,...arr.map(f=>f.q));return arr.sort((a,b)=>b.q-a.q).map(f=>`<div class="hbar"><span class="n">${f.name}</span><span class="t"><i style="width:${f.q/mx*100}%;background:${f.c}"></i></span><span class="x">${f.q} <small class="m">${total?Math.round(f.q/total*100):0}%</small></span></div>`).join("")};
+  const h=hours(list);const hs=h.slice(8,23);const mh=Math.max(1,...hs);const peak=hs.indexOf(Math.max(...hs));
+  const nd=period==="30"?30:7;const days=[];
+  for(let i=nd-1;i>=0;i--){const st=dayStart()-i*DAY;days.push({d:new Date(st),v:paidIn(all,st,st+DAY).reduce((a,b)=>a+b.total,0)})}
+  const md=Math.max(1,...days.map(d=>d.v));const plan=productionPlan(all);
+  const label={hoy:"hoy",7:"los últimos 7 días",30:"los últimos 30 días"}[period];
+  const slowest=k.cooks.length?k.cooks[k.cooks.length-1].avgPrep:1;
+  $("#app").innerHTML=`
+    ${demo?`<div class="demo"><span>Estás viendo datos de ejemplo</span><button id="demoOff">Ver mis datos</button></div>`:""}
+    <div class="chips" role="group" aria-label="Periodo">${[["hoy","Hoy"],["7","7 días"],["30","30 días"]].map(([k,l])=>`<button data-period="${k}" aria-pressed="${period===k}">${l}</button>`).join("")}</div>
+    <h2>Qué hacer ahora</h2>
+    <div class="recs">${recs.map(r=>`<div class="rec" style="--rc:${r.c}"><span class="em">${r.e}</span><div><b>${r.t}</b><p>${r.p}</p></div></div>`).join("")}</div>
+    ${!cur.tickets&&!demo&&!sales.length?`<div class="empty"><div class="big">📊</div><p>¿Quieres ver cómo se verá el análisis?</p><button class="btn primary" id="demoOn">Probar con datos de ejemplo</button></div>`:""}
+    ${cur.tickets?`
+    <h2>Números de ${label}</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="v">${money(cur.rev)}</div><div class="l">Ventas</div>${delta(cur.rev,prev.rev)}</div>
+      <div class="kpi"><div class="v">${cur.u}</div><div class="l">Empanadas</div>${delta(cur.u,prev.u)}</div>
+      <div class="kpi"><div class="v">${cur.b}</div><div class="l">Bebidas</div>${delta(cur.b,prev.b)}</div>
+      <div class="kpi"><div class="v">${money(cur.profit)}</div><div class="l">Ganancia estimada</div>${delta(cur.profit,prev.profit)}</div>
+    </div>
+    ${k.n?`<div class="card"><h3>Tiempos de cocina</h3>
+      <div class="kpis" style="margin-bottom:8px"><div class="kpi"><div class="v ${k.avgTotal>config.target*60000?"down":"up"}">${mmss(k.avgTotal)}</div><div class="l">Min. por pedido</div></div><div class="kpi"><div class="v">${mmss(k.avgWait)}</div><div class="l">Espera</div></div><div class="kpi"><div class="v">${mmss(k.avgPrep)}</div><div class="l">Preparación</div></div><div class="kpi"><div class="v">${k.late}</div><div class="l">Sobre ${config.target} min</div></div></div>
+      <p class="sub" style="margin:4px 0 6px">Preparación promedio por cocinero (menos es mejor)</p>
+      ${k.cooks.map((c,i)=>`<div class="hbar"><span class="n">${i===0?"🏅 ":""}${esc(c.name)}</span><span class="t"><i style="width:${c.avgPrep/slowest*100}%;background:${i===0?"var(--good)":"var(--naranja)"}"></i></span><span class="x">${mmss(c.avgPrep)} <small class="m">${c.n}</small></span></div>`).join("")}
+    </div>`:""}
+    ${(()=>{const rows=PRODUCTS.map(p=>{const m=config.prices[p.id]-config.costs[p.id];return{...p,q:cur.by[p.id],m,pct:config.prices[p.id]?m/config.prices[p.id]:0,g:cur.by[p.id]*m}}).filter(p=>p.q).sort((a,b)=>b.g-a.g);if(!rows.length)return"";const mx=rows[0].g||1;
+      return `<div class="card"><h3>Qué te deja más dinero</h3><p class="sub" style="margin:0 0 8px">Ganancia estimada por producto (unidades × margen). Empuja los de arriba.</p>
+      ${rows.map(p=>`<div class="hbar"><span class="n">${p.name}<br><small class="m">margen ${Math.round(p.pct*100)}%</small></span><span class="t"><i style="width:${p.g/mx*100}%;background:${p.c}"></i></span><span class="x">${money(p.g)}</span></div>`).join("")}</div>`})()}
+    ${(()=>{if(demo)return"";const lb=lostBy(s,e);const ent=Object.entries(lb).sort((a,b)=>b[1]-a[1]);if(!ent.length)return"";
+      return `<div class="card"><h3>Ventas perdidas por agotados</h3><p class="sub" style="margin:0 0 8px">Veces que un cliente pidió un sabor sin stock.</p>${ent.map(([p,q])=>`<div class="hbar"><span class="n">${P(p).name}</span><span class="t"><i style="width:${q/ent[0][1]*100}%;background:var(--brasa)"></i></span><span class="x">${q} <small class="m">${money(q*config.prices[p])}</small></span></div>`).join("")}</div>`})()}
+    <div class="card"><h3>Empanadas más vendidas</h3>${bars(EMP.map(f=>({...f,q:cur.by[f.id]})),cur.u)}</div>
+    <div class="card"><h3>Bebidas más vendidas</h3>${bars(BEB.map(f=>({...f,q:cur.by[f.id]})),cur.b)}<p class="sub" style="margin:8px 0 0">${Math.round(cur.drinkRate*100)}% de los pedidos incluye bebida.</p></div>
+    <div class="card"><h3>Empanadas por hora</h3><div class="vchart">${hs.map((v,i)=>`<div class="col ${i===peak&&v?"peak":""}">${v?`<em>${v}</em>`:""}<i style="height:${v/mh*100}%"></i><span>${i+8}h</span></div>`).join("")}</div></div>
+    ${(()=>{const M=manHours(s,e);return M.people.length?`<div class="card"><h3>Horas hombre</h3>
+      <div class="kpis" style="margin-bottom:8px"><div class="kpi"><div class="v">${hdec(M.total)}</div><div class="l">Horas totales</div></div><div class="kpi"><div class="v">${M.total>=9e5?money(cur.rev/(M.total/36e5)):"—"}</div><div class="l">Ventas por hora hombre</div></div><div class="kpi"><div class="v">${M.cocina>=9e5?(cur.u/(M.cocina/36e5)).toFixed(1):"—"}</div><div class="l">Empanadas por hora de cocina</div></div><div class="kpi"><div class="v">${hdec(M.cocina)}</div><div class="l">Horas de cocina</div></div></div>
+      ${mhBars(M.people)}</div>`:""})()}
+    ${list.some(s=>s.cashier)?`<div class="card"><h3>Ventas por cajero</h3>${cashierBars(list)}</div>`:""}
+    <div class="card"><h3>Pago</h3>
+      <div class="hbar"><span class="n">Efectivo</span><span class="t"><i style="width:${cur.cash/cur.rev*100}%;background:var(--good)"></i></span><span class="x">${money(cur.cash)}</span></div>
+      <div class="hbar"><span class="n">Transferencia</span><span class="t"><i style="width:${(cur.rev-cur.cash)/cur.rev*100}%;background:var(--naranja)"></i></span><span class="x">${money(cur.rev-cur.cash)}</span></div></div>`:""}
+    ${period!=="hoy"&&cur.tickets?(()=>{const w=weekdayAvg(list);const v=w.filter(x=>x.n);if(v.length<2)return"";const mx=Math.max(...v.map(x=>x.avg),1);const hi=v.reduce((a,b)=>b.avg>a.avg?b:a),lo=v.reduce((a,b)=>b.avg<a.avg?b:a);const order=[1,2,3,4,5,6,0];
+      return `<div class="card"><h3>Promedio por día de la semana</h3><div class="wk">${order.map(i=>w[i]).map(x=>`<div class="col ${x.n&&x===hi?"best":x.n&&x===lo?"worst":""}">${x.n?`<em>${money(x.avg).replace(".00","")}</em>`:""}<i style="height:${x.avg/mx*100}%"></i><span>${x.name.slice(0,3)}</span></div>`).join("")}</div><p class="sub" style="margin:8px 0 0">Verde: tu mejor día. Rojo: el más flojo, ideal para promociones.</p></div>`})():""}
+    ${all.length?`<div class="card"><h3>Ventas por día (últimos ${nd})</h3><div class="vchart">${days.map((d,i)=>`<div class="col ${i===nd-1?"peak":""}"><i style="height:${d.v/md*100}%"></i><span>${nd===7?d.d.toLocaleDateString("es",{weekday:"short"}):(i%5===4?d.d.getDate():"")}</span></div>`).join("")}</div></div>`:""}
+    ${plan?`<div class="card"><h3>Prepara para mañana</h3><p class="sub" style="margin:0 0 10px">Promedio de los últimos 7 días, más 10% de margen.</p><div class="plan">${plan.map(f=>`<div style="border-top:5px solid ${f.c}"><div class="v">${f.q}</div><div class="l">${f.name}</div></div>`).join("")}</div></div>`:""}`;
+}
+
+function renderSettings(){
+  $("#app").innerHTML=`
+    <h2>Ajustes</h2>
+    <div class="card"><h3>Precios y costos</h3><p class="sub" style="margin:0 0 6px">El costo sirve para calcular la ganancia estimada.</p>
+      <div class="frow head"><span>Producto</span><span>Precio $</span><span>Costo $</span></div>
+      ${PRODUCTS.map(f=>`<div class="frow"><span style="font-weight:700">${f.name}</span>
+        <input type="number" step="0.05" min="0" inputmode="decimal" data-price="${f.id}" value="${config.prices[f.id]}" aria-label="Precio ${f.name}">
+        <input type="number" step="0.05" min="0" inputmode="decimal" data-cost="${f.id}" value="${config.costs[f.id]}" aria-label="Costo ${f.name}"></div>`).join("")}
+    </div>
+    <div class="card"><h3>Equipo</h3>
+      <label class="f">Caja y administración</label>
+      <div class="people">${config.staff.map((s,i)=>`<span class="person">${esc(s.name)}<span class="r ${s.rol==="admin"?"":"caj"}">${s.rol==="admin"?"Admin":"Cajero"}</span><button data-rmstaff="${i}" aria-label="Quitar ${esc(s.name)}">✕</button></span>`).join("")}</div>
+      <div class="addrow"><input class="inp" id="newStaff" maxlength="30" placeholder="Nombre" aria-label="Nombre de cajero o administrador">
+        <select id="newStaffRol" aria-label="Rol"><option value="cajero">Cajero</option><option value="admin">Administrador</option></select>
+        <button class="btn dark sm" id="addStaff">Agregar</button></div>
+      <label class="f" style="margin-top:16px">Cocineros</label>
+      <div class="people">${config.cooks.map((c,i)=>`<span class="person">${esc(c)}<button data-rmcook="${i}" aria-label="Quitar ${esc(c)}">✕</button></span>`).join("")}</div>
+      <div class="addrow"><input class="inp" id="newCook" maxlength="30" placeholder="Nombre" aria-label="Nombre de cocinero"><button class="btn dark sm" id="addCook">Agregar</button></div>
+    </div>
+    <div class="card"><h3>Cocina</h3>
+      <label class="f" for="target">Tiempo meta por pedido (minutos)</label><input class="inp" id="target" type="number" min="1" inputmode="numeric" value="${config.target}">
+    </div>
+    <div class="card"><h3>Metas</h3>
+      <div class="row2"><div><label class="f" for="goal">Venta diaria ($)</label><input class="inp" type="number" min="0" inputmode="decimal" id="goal" value="${config.goal}"></div>
+      <div><label class="f" for="stockMax">Inventario lleno (unid.)</label><input class="inp" type="number" min="1" inputmode="numeric" id="stockMax" value="${config.stockMax}"></div></div>
+    </div>
+    <div class="stack">
+      <button class="btn primary" id="saveCfg">Guardar ajustes</button>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Claves de acceso</h3><p class="sub" style="margin:0 0 8px">Deja en blanco la que no quieras cambiar.</p>
+      <div class="row2"><div><label class="f" for="kv">Nueva clave Ventas</label><input class="inp pin" id="kv" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></div>
+      <div><label class="f" for="kc">Nueva clave Cocina</label><input class="inp pin" id="kc" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></div></div>
+      <button class="btn dark" style="width:100%;margin-top:10px" id="saveKeys">Cambiar claves</button>
+    </div>
+    <div class="card"><h3>Copia de seguridad</h3>
+      <p class="sub" style="margin:0 0 10px">${db?"Descarga todos tus datos en un archivo por si los necesitas.":"Tus datos viven solo en este navegador. Si se borra el historial del navegador, se pierden. Descarga una copia cada semana."}</p>
+      <div class="row2"><button class="btn dark" id="backup">Descargar copia</button>${db?"":`<label class="btn" style="text-align:center;cursor:pointer">Restaurar copia<input type="file" id="restore" accept=".json,application/json" hidden></label>`}</div>
+    </div>
+    <div class="stack">
+      <button class="btn" id="demoToggle">${demo?"Ver mis datos reales":"Probar el análisis con datos de ejemplo"}</button>
+      <button class="btn danger" id="wipe">Borrar todas las ventas</button>
+    </div>
+    <p class="sub" style="margin-top:16px">${db?"Todo se guarda en la nube: la caja y la cocina pueden estar en teléfonos distintos y ven los pedidos al instante.":"Modo local: los datos se guardan en este navegador. La cocina puede abrirse en otra pestaña o ventana del mismo equipo y recibe los pedidos al instante."}</p>`;
+}
+
+/* ---------- Eventos ---------- */
+document.addEventListener("keydown",e=>{if(!$("#askBox").hidden){if(e.key==="Escape")askDone($("#askIn").hidden?false:null);if(e.key==="Enter")$("#askYes").click();return}if(e.key==="Enter"&&e.target.id==="acctName")$("#createAcct").click();if(e.key==="Escape"&&!$("#modal").hidden)closePreview();if(e.key==="Enter"&&e.target.id==="pin")tryLogin();if(e.key==="Enter"&&e.target.id==="nc")$("#createKeys")?.click();if(e.key==="Enter"&&e.target.id==="newStaff")$("#addStaff").click();if(e.key==="Enter"&&e.target.id==="newCook")$("#addCook").click()});
+document.addEventListener("change",async e=>{
+  if(e.target.id!=="restore"||db||!isAdmin())return;const f=e.target.files[0];if(!f)return;
+  try{const d=JSON.parse(await f.text());if(d.app!=="empanadictos"||!Array.isArray(d.sales))throw 0;
+    if(!await ask(`Restaurar la copia del ${new Date(d.exported).toLocaleString("es")}? Reemplaza todos los datos actuales de este navegador.`,{ok:"Restaurar",danger:true}))return;
+    config=mergeCfg(d.config);sales=d.sales||[];cierres=d.cierres||{};inv=d.inv||inv;claves=d.claves||claves;turnos=d.turnos||[];cuentas=d.cuentas||[];perdidas=d.perdidas||[];saveLocal();toast("Copia restaurada");restoreSession();render()}
+  catch(err){toast("Ese archivo no es una copia válida de la app",true)}
+  e.target.value="";
+});
+document.addEventListener("input",e=>{
+  if(e.target.id==="client")client=e.target.value;
+  if(["pin","nv","nc","kv","kc"].includes(e.target.id))e.target.value=e.target.value.replace(/\D/g,"");
+  if(e.target.id==="fondo"||e.target.id==="contado")updateCuadre();
+  if(e.target.id==="recv"){received=e.target.value;const tot=acctTotal(acct);const r=parseFloat(received);const v=r-tot;$("#vuelto").innerHTML=received!==""&&!isNaN(r)?(v>=0?`<span class="m">Vuelto</span><div class="change">${money(v)}</div>`:`<b class="down">Faltan ${money(-v)}</b>`):""}
+});
+document.addEventListener("click",async ev=>{
+  const b=ev.target.closest("button");if(!b||b.disabled)return;
+  if(b.id==="askYes"){askDone($("#askIn").hidden?true:$("#askIn").value.trim());return}
+  if(b.id==="askNo"){askDone($("#askIn").hidden?false:null);return}
+  if(b.id==="share"){onShare(b);return}
+  if(b.id==="closeModal"){closePreview();return}
+  if(b.id==="pdf"){makePdf(b);return}
+  if(b.id==="logout"){logout();return}
+  if(b.dataset.me!==undefined&&pendingRole){setSession(pendingRole,b.dataset.me);toast("Hola, "+b.dataset.me);render();window.scrollTo(0,0);return}
+  if(b.id==="backLogin"){pendingRole=null;renderGate();return}
+  if(b.dataset.login){loginRole=b.dataset.login;renderGate();return}
+  if(b.id==="enter"){tryLogin();return}
+  if(b.id==="createKeys"){
+    const v=$("#nv").value,c=$("#nc").value,err=$("#err");
+    if(!/^\d{4,8}$/.test(v)||!/^\d{4,8}$/.test(c)){err.textContent="Cada clave debe tener de 4 a 8 números";return}
+    if(v===c){err.textContent="Las dos claves deben ser distintas";return}
+    const adm=($("#adm").value||"").trim().slice(0,30);if(!adm){err.textContent="Escribe tu nombre";return}
+    try{config.staff=[{name:adm,rol:"admin"},...config.staff.filter(x=>x.name!=="Administrador"&&x.name!==adm)];await saveConfig();
+      await saveClaves({ventas:await hashPin("ventas",v),cocina:await hashPin("cocina",c)});setSession("ventas",adm);toast("Claves guardadas");render()}catch(e){err.textContent="No se pudieron guardar las claves"}
+    return;
+  }
+  if(b.id==="saveKeys"){if(!isAdmin()){toast("Solo un administrador puede hacer esto",true);return}
+    if(role!=="ventas")return;
+    const v=$("#kv").value,c=$("#kc").value;
+    if((v&&!/^\d{4,8}$/.test(v))||(c&&!/^\d{4,8}$/.test(c))){toast("Cada clave debe tener de 4 a 8 números",true);return}
+    if(!v&&!c){toast("Escribe al menos una clave nueva",true);return}
+    if(v&&c&&v===c){toast("Las dos claves deben ser distintas",true);return}
+    const n={...claves};if(v)n.ventas=await hashPin("ventas",v);if(c)n.cocina=await hashPin("cocina",c);
+    try{await saveClaves(n);setSession("ventas",who,true);toast("Claves actualizadas. Los equipos con la clave anterior deben volver a entrar.");renderSettings()}catch(e){toast("No se pudieron guardar",true)}
+    return;
+  }
+  if(role!=="ventas"&&!b.dataset.start&&!b.dataset.ready&&!b.dataset.deliver&&b.dataset.cook===undefined)return;
+  if(role!=="cocina"&&(b.dataset.start||b.dataset.ready||b.dataset.deliver))return;
+  if(b.id==="addStaff"||b.id==="addCook"||b.dataset.rmstaff!==undefined||b.dataset.rmcook!==undefined){if(!isAdmin())return;
+    if(b.id==="addStaff"){const n=$("#newStaff").value.trim().slice(0,30);if(!n){toast("Escribe un nombre",true);return}if(config.staff.some(x=>x.name.toLowerCase()===n.toLowerCase())){toast("Ese nombre ya existe",true);return}config.staff=[...config.staff,{name:n,rol:$("#newStaffRol").value}]}
+    if(b.id==="addCook"){const n=$("#newCook").value.trim().slice(0,30);if(!n){toast("Escribe un nombre",true);return}if(config.cooks.some(x=>x.toLowerCase()===n.toLowerCase())){toast("Ese nombre ya existe",true);return}config.cooks=[...config.cooks,n]}
+    if(b.dataset.rmstaff!==undefined){if(config.staff.length<=1){toast("Debe quedar al menos una persona en caja",true);return}const x=config.staff[+b.dataset.rmstaff];if(x.rol==="admin"&&config.staff.filter(s=>s.rol==="admin").length<=1){toast("Debe quedar al menos un administrador",true);return}if(!await ask("¿Quitar a "+x.name+"?"))return;config.staff=config.staff.filter((_,i)=>i!==+b.dataset.rmstaff)}
+    if(b.dataset.rmcook!==undefined){if(config.cooks.length<=1){toast("Debe quedar al menos un cocinero",true);return}const x=config.cooks[+b.dataset.rmcook];if(!await ask("¿Quitar a "+x+"?"))return;config.cooks=config.cooks.filter((_,i)=>i!==+b.dataset.rmcook)}
+    try{await saveConfig();toast("Equipo actualizado")}catch(e){toast("No se pudo guardar",true)}
+    renderSettings();return;
+  }
+  if(b.dataset.tab){if(b.dataset.tab!=="vender")charging=false;tab=b.dataset.tab;if(tab==="cocina")seenPending=new Set(sales.filter(s=>s.status==="pendiente").map(s=>s.id));render();window.scrollTo(0,0);return}
+  if(b.dataset.add){const id=b.dataset.add;if(P(id).k==="emp"&&(cart[id]||0)>=stock(id)){
+      const ok=await ask(`${P(id).name} está agotada. ¿El cliente la pidió? Se registra como venta perdida para planear mejor la producción.`,{ok:"Registrar venta perdida"});
+      if(ok){const r={t:Date.now(),p:id,by:who||""};try{if(db)await db.collection("perdidas").add(r);else{r.id="p"+r.t;perdidas.unshift(r);saveLocal()}toast("Venta perdida registrada")}catch(e){}}
+      return}cart[id]=(cart[id]||0)+1;renderSell();return}
+  if(b.dataset.minus){const k=b.dataset.minus;cart[k]--;if(cart[k]<=0)delete cart[k];renderSell();return}
+  if(b.dataset.pay){pay=b.dataset.pay;renderPaybar();return}
+  if(b.dataset.acct!==undefined){const next=b.dataset.acct||null;
+    if(next!==acct&&Object.keys(cart).length&&!await ask("Tienes productos sin enviar en el pedido actual. ¿Cambiar de cuenta y descartarlos?",{ok:"Descartar",danger:true}))return;
+    if(next!==acct)cart={};acct=next;charging=false;newAcct=false;received="";renderSell();window.scrollTo(0,0);return}
+  if(b.id==="newAcct"){newAcct=true;renderSell();setTimeout(()=>$("#acctName")?.focus(),30);return}
+  if(b.id==="cancelAcct"){newAcct=false;renderSell();return}
+  if(b.id==="createAcct"){const n=($("#acctName").value||"").trim().slice(0,30);
+    if(!n){toast("Escribe el nombre o la mesa",true);return}
+    if(openAccts().some(c=>c.name.toLowerCase()===n.toLowerCase())){toast(`Ya hay una cuenta abierta "${n}". Usa otro nombre.`,true);return}
+    b.disabled=true;try{const id=await addCuenta({name:n,status:"abierta",tOpen:Date.now(),openedBy:who||""});acct=id;newAcct=false;toast(`Cuenta "${n}" abierta`)}catch(e){toast("No se pudo abrir la cuenta",true)}
+    renderSell();return}
+  if(b.id==="sendAcct"){const c=cuentas.find(x=>x.id===acct);if(!c)return;
+    const items={...cart};const total=cartTotal();const t=Date.now();const num=nextNum();const hasEmp=Object.keys(items).some(f=>P(f).k==="emp");
+    b.disabled=true;
+    try{await addSale({t,num,items,total,pay:null,paid:false,tPaid:null,paidBy:"",cuenta:c.id,ronda:acctOrders(c.id).length+1,cashier:who||"",client:c.name,status:hasEmp?"pendiente":"entregado",cook:null,tStart:null,tReady:null,tDone:hasEmp?null:t});
+      cart={};toast(`Agregado a ${c.name}: ${money(total)}`+(hasEmp?", enviado a cocina":""))}catch(e){toast("No se pudo guardar. Intenta de nuevo.",true)}
+    render();return}
+  if(b.id==="chargeAcct"){if(Object.keys(cart).length){toast("Primero envía o quita los productos del pedido actual",true);return}charging=true;received="";render();window.scrollTo(0,0);return}
+  if(b.id==="backCharge"){charging=false;render();return}
+  if(b.dataset.cpay){pay=b.dataset.cpay;renderCharge();return}
+  if(b.id==="confirmPay"){const c=cuentas.find(x=>x.id===acct);if(!c)return;const ords=acctOrders(c.id);const tot=acctTotal(c.id);const now=Date.now();
+    b.disabled=true;
+    try{for(const s of ords){if(s.paid===false)await patchSale(s.id,{paid:true,pay,tPaid:now,paidBy:who||""})}
+      await patchCuenta(c.id,{status:"cobrada",tClosed:now,pay,total:tot,paidBy:who||""});
+      toast(`Cuenta de ${c.name} cobrada: ${money(tot)}`);acct=null;charging=false;received=""}
+    catch(e){toast("No se completó el cobro. Revisa la cuenta e intenta de nuevo.",true);b.disabled=false}
+    render();window.scrollTo(0,0);return}
+  if(b.id==="voidAcct"){const c=cuentas.find(x=>x.id===acct);if(!c)return;const ords=acctOrders(c.id);const tot=acctTotal(c.id);
+    const reason=await ask(ords.length?`Anular la cuenta de ${c.name} por ${money(tot)}. El producto ya entregado se registrará como pérdida. Escribe el motivo:`:`¿Anular la cuenta vacía de ${c.name}?`,{input:!!ords.length,placeholder:"Ej. Cliente se fue sin pagar",ok:"Anular",danger:true});
+    if(reason===null||reason===false)return;
+    try{for(const s of ords)await patchSale(s.id,{void:true,paid:false,voidReason:reason===true?"":reason,voidBy:who||"",tVoid:Date.now(),status:s.status==="entregado"?"entregado":"anulado"});
+      await patchCuenta(c.id,{status:"anulada",tClosed:Date.now(),reason:reason===true?"":reason,voidTotal:tot,voidBy:who||""});
+      toast("Cuenta anulada");acct=null;charging=false}catch(e){toast("No se pudo anular",true)}
+    render();return}
+  if(b.id==="cobrar"){
+    const items={...cart};const total=Math.round(Object.entries(items).reduce((a,[f,q])=>a+q*config.prices[f],0)*100)/100;
+    const t=Date.now();const num=nextNum();
+    const hasEmp=Object.keys(items).some(f=>P(f).k==="emp");
+    b.disabled=true;
+    try{await addSale({t,num,items,total,pay,paid:true,tPaid:t,paidBy:who||"",cuenta:null,cashier:who||"",client:client.trim().slice(0,40),status:hasEmp?"pendiente":"entregado",cook:null,tStart:null,tReady:null,tDone:hasEmp?null:t});
+      cart={};client="";toast(`Pedido #${num} registrado: ${money(total)}`+(hasEmp?", enviado a cocina":""));}
+    catch(e){toast("No se pudo guardar. Intenta de nuevo.",true)}
+    render();return;
+  }
+  if(b.dataset.del){if(!isAdmin())return;const s=sales.find(x=>x.id===b.dataset.del);if(!s)return;
+    const r=await ask(`Anular el pedido #${s.num||""} de ${money(s.total)}. ${s.tStart?"Ya se preparó, así que el inventario no se devuelve.":"No se alcanzó a preparar, así que vuelve al inventario."} Escribe el motivo:`,{input:true,placeholder:"Ej. Error al registrar",ok:"Anular",danger:true});
+    if(r===null)return;
+    try{await patchSale(s.id,{void:true,voidReason:r,voidBy:who||"",tVoid:Date.now(),status:s.status==="entregado"?"entregado":"anulado"});toast("Venta anulada")}catch(e){toast("No se pudo anular",true)}
+    render();return}
+  if(b.dataset.cook!==undefined){myCook=b.dataset.cook;try{localStorage.setItem("emp_cook",myCook)}catch(e){}renderKitchen();return}
+  if(b.dataset.start){if(!myCook){toast("Primero elige quién cocina",true);return}await patchSale(b.dataset.start,{status:"preparando",cook:myCook,tStart:Date.now()}).catch(()=>toast("No se pudo actualizar",true));render();return}
+  if(b.dataset.ready){await patchSale(b.dataset.ready,{status:"listo",tReady:Date.now()}).catch(()=>toast("No se pudo actualizar",true));render();return}
+  if(b.dataset.deliver){await patchSale(b.dataset.deliver,{status:"entregado",tDone:Date.now()}).catch(()=>toast("No se pudo actualizar",true));render();return}
+  if(b.dataset.invset&&!isAdmin()){toast("Solo un administrador puede ajustar el conteo",true);return}
+  if(b.dataset.invadd||b.dataset.invset){
+    const id=b.dataset.invadd||b.dataset.invset;const v=parseInt(document.querySelector(`[data-invq="${id}"]`).value,10);
+    if(isNaN(v)||v<0){toast("Escribe una cantidad",true);return}
+    await setStock({[id]:b.dataset.invadd?stock(id)+v:v}).catch(()=>toast("No se pudo guardar",true));
+    toast(`${P(id).name}: ${stock(id)} unidades`);render();return;
+  }
+  if(b.id==="refill"){if(!isAdmin()){toast("Solo un administrador puede hacer esto",true);return}if(!await ask(`¿Poner todas las empanadas en ${config.stockMax} unidades?`))return;await setStock(Object.fromEntries(EMP.map(p=>[p.id,config.stockMax]))).catch(()=>toast("No se pudo guardar",true));toast("Inventario repuesto");render();return}
+  if(b.dataset.day){cajaDay+=Number(b.dataset.day)*DAY;cajaDay=dayStart(new Date(cajaDay+36e5*3));renderCaja();return}
+  if(b.id==="cerrar"){
+    const {st}=dayData(cajaDay);const fondo=parseFloat($("#fondo").value)||0;const cv=$("#contado").value;
+    if(cv===""){toast("Escribe el efectivo contado",true);return}
+    const contado=parseFloat(cv)||0;const esperado=fondo+st.cash;
+    const oa=cajaDay===dayStart()?openAccts():[];const oaTot=oa.reduce((a,c)=>a+acctTotal(c.id),0);
+    if(oa.length&&!await ask(`Hay ${oa.length} ${oa.length===1?"cuenta":"cuentas"} sin cobrar por ${money(oaTot)}. No se sumarán a este cierre. ¿Cerrar la caja de todos modos?`,{ok:"Cerrar igual",danger:true}))return;
+    const rec={fecha:dkey(cajaDay),closedBy:who||"",fondo,contado,efectivo:st.cash,transferencias:st.rev-st.cash,ventas:st.rev,pedidos:st.tickets,empanadas:st.u,bebidas:st.b,esperado,diferencia:Math.round((contado-esperado)*100)/100,closedAt:Date.now(),pendientes:oa.length,pendienteMonto:Math.round(oaTot*100)/100};
+    try{await saveCierre(rec.fecha,rec);toast("Caja cerrada");}catch(e){toast("No se pudo guardar el cierre",true)}
+    renderCaja();return;
+  }
+  if(b.id==="preview"){openPreview();return}
+  if(b.dataset.endshift){if(!isAdmin()){toast("Solo un administrador puede hacer esto",true);return}const t=turnos.find(x=>x.id===b.dataset.endshift);if(!await ask(`¿Cerrar ahora el turno de ${t?t.name:"esta persona"}?`))return;await endShift(b.dataset.endshift);toast("Turno cerrado");render();return}
+  if(b.id==="dlcsv"){download(`ventas-empanadictos-${dkey(cajaDay)}.csv`,csvFor(cajaDay),"text/csv");return}
+  if(b.dataset.period){period=b.dataset.period;renderAnalysis();return}
+  if(b.id==="demoOn"){demo=true;demoSales=null;demoShifts=null;renderAnalysis();return}
+  if(b.id==="demoOff"){demo=false;renderAnalysis();return}
+  if(b.id==="demoToggle"){demo=!demo;demoSales=null;demoShifts=null;tab="analisis";render();return}
+  if(b.id==="saveCfg"){if(!isAdmin()){toast("Solo un administrador puede hacer esto",true);return}
+    document.querySelectorAll("[data-price]").forEach(i=>config.prices[i.dataset.price]=Math.max(0,parseFloat(i.value)||0));
+    document.querySelectorAll("[data-cost]").forEach(i=>config.costs[i.dataset.cost]=Math.max(0,parseFloat(i.value)||0));
+    config.goal=Math.max(0,parseFloat($("#goal").value)||0);
+    config.target=Math.max(1,parseFloat($("#target").value)||8);
+    config.stockMax=Math.max(1,parseInt($("#stockMax").value,10)||50);
+    demoSales=null;
+    try{await saveConfig();toast("Ajustes guardados")}catch(e){toast("No se pudo guardar",true)}
+    return;
+  }
+  if(b.id==="backup"){if(!isAdmin())return;const data={app:"empanadictos",v:1,exported:Date.now(),config,sales,cierres,inv,claves,turnos,cuentas,perdidas};download(`respaldo-empanadictos-${dkey(Date.now())}.json`,JSON.stringify(data),"application/json");return}
+  if(b.id==="wipe"){if(!isAdmin()){toast("Solo un administrador puede hacer esto",true);return}
+    if(!await ask("Se borrarán todas las ventas, cuentas y ventas perdidas. Descarga antes una copia si la necesitas. ¿Continuar?",{ok:"Borrar todo",danger:true}))return;
+    if(db){for(const s of[...sales]){try{await db.collection("ventas").doc(s.id).delete()}catch(e){}}for(const c of[...cuentas]){try{await db.collection("cuentas").doc(c.id).delete()}catch(e){}}}else{sales=[];cuentas=[];perdidas=[];saveLocal()}acct=null;charging=false;
+    toast("Ventas borradas");render();
+  }
+});
+setInterval(()=>{
+  if(tab!=="cocina")return;const now=Date.now();
+  document.querySelectorAll("[data-since]").forEach(el=>{const ms=now-Number(el.dataset.since);el.textContent=mmss(ms);const t=el.closest(".ticket");t.classList.remove("ok","mid","late");t.classList.add(tClass(ms))});
+},1000);
+render();
+</script>
+</body>
+</html>
