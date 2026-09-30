@@ -44,6 +44,11 @@ header{background:radial-gradient(120% 140% at 50% 120%,rgba(214,40,57,.55) 0%,r
 .tag{font-family:Pacifico,cursive;font-size:14px;color:#FFE9C7;margin-top:2px}
 .hright{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .sync{font-size:11px;color:#E9CFC0;text-align:right}
+.brand>div:nth-child(2){min-width:0;flex:1 1 auto}
+.hright{min-width:0;flex:0 1 auto;max-width:48%}
+.rolechip{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.sync{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:400px){.word{font-size:24px}.tag{font-size:12px}.brand{gap:8px}.brand svg{width:40px;height:30px}.rolechip{padding:7px 9px;font-size:12px}}
 .gear{border:0;background:rgba(255,255,255,.12);color:#fff;border-radius:12px;width:42px;height:42px;font-size:20px}
 
 main{max-width:820px;margin:0 auto;padding:16px 16px 190px}
@@ -53,7 +58,7 @@ h3{font-size:17px;font-weight:800;margin:0 0 10px}
 small.m{color:var(--muted);font-weight:600}
 
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--carbon);display:flex;justify-content:center;gap:2px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));z-index:20}
-nav.tabs[hidden],.paybar[hidden],nav.tabs button[hidden]{display:none}
+nav.tabs[hidden],.paybar[hidden],nav.tabs button[hidden],nav.tabs .pill[hidden]{display:none}
 nav.tabs button{flex:1;max-width:150px;background:none;border:0;color:#CDB5AC;padding:7px 2px;border-radius:14px;font-weight:700;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
 nav.tabs button .ic{font-size:21px;line-height:1}
 nav.tabs button[aria-selected="true"]{background:linear-gradient(180deg,#F3A29E,var(--boton));color:var(--boton-ink)}
@@ -258,7 +263,9 @@ body.kitchen .ticket ul{font-size:20px}
 .askbox{position:fixed;inset:0;z-index:80;background:rgba(28,19,21,.6);display:grid;place-items:center;padding:20px}
 .askbox[hidden]{display:none}
 .askc{background:var(--surface);border-radius:20px;padding:18px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.4)}
-.askc p{margin:0 0 12px;font-weight:700;font-size:16px}
+.askc p{margin:0 0 12px;font-weight:700;font-size:16px;white-space:pre-line}
+.wa-btn{display:inline-block;margin-top:8px;background:#25D366;border-color:#25D366;color:#073B1F;text-decoration:none}
+.minrow{display:grid;grid-template-columns:1fr 90px 70px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
 .askc .inp{margin-bottom:12px}
 .proj{font-size:13px;font-weight:800;margin-top:6px}
 .lost{display:inline-block;font-size:11px;font-weight:800;color:var(--brasa)}
@@ -365,11 +372,12 @@ const EMP=PRODUCTS.filter(p=>p.k==="emp"), BEB=PRODUCTS.filter(p=>p.k==="beb");
 const DEFAULT_CONFIG={
   prices:{ranchera:1.5,pork:1.75,hawaiana:1.5,queso:1.25,pollo:1.5,jamaica:1.5,limonada:1.5,coca:1.5,aguasin:1.5,aguacon:1.5},
   costs:{ranchera:.6,pork:.75,hawaiana:.6,queso:.45,pollo:.6,jamaica:.4,limonada:.35,coca:.8,aguasin:.5,aguacon:.6},
-  goal:80, staff:[{name:"Administrador",rol:"admin"}], cooks:["Cocinero 1","Cocinero 2"], target:8, stockMax:50
+  goal:80, staff:[{name:"Administrador",rol:"admin"}], cooks:["Cocinero 1","Cocinero 2"], target:8, stockMax:50,
+  mins:{ranchera:10,pork:10,hawaiana:10,queso:10,pollo:10,jamaica:6,limonada:6,coca:6,aguasin:6,aguacon:6}, alertPhone:"", alertHour:"15:00"
 };
 const LS="empanadictos_v2";
 let config=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-let sales=[], cierres={}, inv={base:Object.fromEntries(EMP.map(p=>[p.id,50])),since:0};
+let sales=[], cierres={}, inv={base:Object.fromEntries(PRODUCTS.map(p=>[p.id,50])),since:0};
 let demo=false, demoSales=null;
 let tab="vender", period="hoy", cart={}, pay="efectivo", client="", cajaDay=null;
 let perdidas=[];
@@ -381,7 +389,7 @@ let db=null, dl=null, loaded=false, seenPending=null;
 let authNeeded=false, authUser=null, authBusy=false;
 
 /* ---------- Almacenamiento ---------- */
-function mergeCfg(c){c=c||{};return{prices:{...DEFAULT_CONFIG.prices,...(c.prices||{})},costs:{...DEFAULT_CONFIG.costs,...(c.costs||{})},goal:Number(c.goal)||DEFAULT_CONFIG.goal,cooks:Array.isArray(c.cooks)&&c.cooks.length?c.cooks:DEFAULT_CONFIG.cooks,staff:Array.isArray(c.staff)&&c.staff.length?c.staff:DEFAULT_CONFIG.staff,target:Number(c.target)||DEFAULT_CONFIG.target,stockMax:Number(c.stockMax)||50}}
+function mergeCfg(c){c=c||{};return{prices:{...DEFAULT_CONFIG.prices,...(c.prices||{})},costs:{...DEFAULT_CONFIG.costs,...(c.costs||{})},goal:Number(c.goal)||DEFAULT_CONFIG.goal,cooks:Array.isArray(c.cooks)&&c.cooks.length?c.cooks:DEFAULT_CONFIG.cooks,staff:Array.isArray(c.staff)&&c.staff.length?c.staff:DEFAULT_CONFIG.staff,target:Number(c.target)||DEFAULT_CONFIG.target,stockMax:Number(c.stockMax)||50,mins:{...DEFAULT_CONFIG.mins,...(c.mins||{})},alertPhone:String(c.alertPhone||""),alertHour:typeof c.alertHour==="string"?c.alertHour:DEFAULT_CONFIG.alertHour}}
 function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LS)||"null");if(s){config=mergeCfg(s.config);sales=s.sales||[];cierres=s.cierres||{};if(s.inv)inv=s.inv;if(s.claves)claves=s.claves;if(s.turnos)turnos=s.turnos;if(s.cuentas)cuentas=s.cuentas;if(s.perdidas)perdidas=s.perdidas;}}catch(e){}}
 function saveLocal(){if(db)return;try{localStorage.setItem(LS,JSON.stringify({config,sales,cierres,inv,claves,turnos,cuentas,perdidas}))}catch(e){}}
 loadLocal();
@@ -557,6 +565,30 @@ function icon(p){return p.k==="emp"
 const produced=s=>!(s.void&&!s.tStart);
 function soldSince(id){return sales.reduce((a,s)=>a+(s.t>=inv.since&&produced(s)?(s.items?.[id]||0):0),0)}
 function stock(id){return Math.max(0,(inv.base[id]??50)-soldSince(id))}
+const minOf=id=>Math.max(0,Number(config.mins?.[id]??10));
+const lowList=()=>PRODUCTS.map(p=>({...p,s:stock(p.id),m:minOf(p.id)})).filter(p=>p.s<=p.m);
+function shortfalls(items){return Object.entries(items).filter(([id,q])=>q>stock(id)).map(([id,q])=>({id,q,s:stock(id)}))}
+function waLink(text){let d=String(config.alertPhone||"").replace(/\D/g,"");if(!d)return"";if(d.startsWith("0")&&d.length===10)d="593"+d.slice(1);return"https://wa.me/"+d+"?text="+encodeURIComponent(text)}
+function lowText(l){return"⚠️ Empanadictos: inventario bajo el mínimo\n"+l.map(p=>`• ${p.name}: quedan ${p.s} (mínimo ${p.m})`).join("\n")+"\n"+new Date().toLocaleString("es")}
+function lowBanner(){const l=lowList();if(!l.length)return"";const w=waLink(lowText(l));
+  return `<div class="warnbox"><b>⚠️ Inventario bajo el mínimo</b>${l.map(p=>`${esc(p.name)}: <strong>${p.s}</strong> (mín. ${p.m})`).join(" · ")}
+    ${w?`<a class="btn sm wa-btn" href="${w}" target="_blank" rel="noopener">Avisar al administrador por WhatsApp</a>`:isAdmin()?`<br><small class="m">Configura el WhatsApp del administrador en Inventario → Mínimos y alertas.</small>`:""}</div>`}
+let lastLows=null;
+function checkLowAlerts(){
+  if(demo)return;const cur=lowList();const ids=new Set(cur.map(p=>p.id));
+  if(lastLows){const nuevos=cur.filter(p=>!lastLows.has(p.id));
+    if(nuevos.length&&role==="ventas"){toast("⚠️ Bajo el mínimo: "+nuevos.map(p=>p.name).join(", "),true);
+      if(isAdmin()&&"Notification" in window&&Notification.permission==="granted"){try{new Notification("Empanadictos: inventario bajo",{body:nuevos.map(p=>`${p.name}: quedan ${p.s} (mín. ${p.m})`).join("\n"),tag:"emp-low"})}catch(e){}}}}
+  lastLows=ids;
+}
+function checkDailyReview(){
+  if(role!=="ventas"||demo||!config.alertHour)return;const [h,m]=config.alertHour.split(":").map(Number);if(isNaN(h))return;
+  const now=new Date();if(now.getHours()*60+now.getMinutes()<h*60+(m||0))return;
+  const k="emp_review_"+dkey(Date.now());try{if(localStorage.getItem(k))return;localStorage.setItem(k,"1")}catch(e){return}
+  const l=lowList();if(!l.length)return;const w=waLink(lowText(l));
+  ask(`Revisión de inventario de las ${config.alertHour}:\n`+l.map(p=>`${p.name}: quedan ${p.s} (mínimo ${p.m})`).join("\n")+(w?"\n\n¿Enviar aviso al administrador por WhatsApp?":""),{ok:w?"Enviar WhatsApp":"Entendido"}).then(ok=>{if(ok&&w)window.open(w,"_blank")});
+  if(isAdmin()&&"Notification" in window&&Notification.permission==="granted"){try{new Notification("Empanadictos: revisión de inventario",{body:l.map(p=>`${p.name}: ${p.s} (mín. ${p.m})`).join("\n"),tag:"emp-review"})}catch(e){}}
+}
 
 /* Aviso de pedidos nuevos en cocina */
 function beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)();[0,.18].forEach(d=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=880;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(.2,a.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d+.15);o.start(a.currentTime+d);o.stop(a.currentTime+d+.16)})}catch(e){}}
@@ -643,7 +675,7 @@ function cashierBars(list){const cs=byCashier(list);if(!cs.length)return"";const
   return cs.map(c=>`<div class="hbar"><span class="n">${esc(c.name)}</span><span class="t"><i style="width:${c.rev/mx*100}%;background:var(--brasa)"></i></span><span class="x">${money(c.rev)} <small class="m">${c.n} ped.</small></span></div>`).join("")}
 function recommendations(cur,prev,list,range0){
   const R=[];
-  const lows=EMP.map(p=>({...p,s:stock(p.id)})).filter(p=>p.s<=10);
+  const lows=lowList();
   if(!demo&&lows.length) R.push({c:"var(--brasa)",e:"📦",t:"Queda poco: "+lows.map(p=>`${p.name} (${p.s})`).join(", "),p:"Hornea o repón antes de tu hora fuerte para no perder ventas."});
   if(!demo&&range0){const lb=lostBy(range0[0],range0[1]);const tot=Object.values(lb).reduce((a,b)=>a+b,0);
     if(tot){const top=Object.entries(lb).sort((a,b)=>b[1]-a[1])[0];R.push({c:"var(--brasa)",e:"🚫",t:`Perdiste ${tot} ${tot===1?"venta":"ventas"} por producto agotado (≈ ${money(Object.entries(lb).reduce((a,[p,q])=>a+q*config.prices[p],0))})`,p:`La más pedida sin stock fue ${P(top[0]).name} (${top[1]}). Hornea más de ese sabor o prepara una tanda antes de la hora fuerte.`})}}
@@ -688,6 +720,7 @@ function productionPlan(all){
 function render(){
   const lo=$("#logout");document.body.classList.toggle("kitchen",role==="cocina");
   if(authNeeded&&!authUser){$("#nav").hidden=true;$("#paybar").hidden=true;lo.hidden=true;renderAuth();return}
+  if(role)checkLowAlerts();
   if(!role){$("#nav").hidden=true;$("#paybar").hidden=true;lo.hidden=true;renderGate();return}
   lo.hidden=false;lo.textContent=(role==="cocina"?"👨‍🍳 ":"💵 ")+(who||"")+"  Salir";lo.title=role==="cocina"?"Cocina":staffRol(who);
   if(role==="cocina"){$("#nav").hidden=true;$("#paybar").hidden=true;tab="cocina";renderKitchen();return}
@@ -701,11 +734,11 @@ function render(){
 }
 
 function tileHTML(p){
-  const q=cart[p.id]||0;const st=p.k==="emp"?stock(p.id):null;const out=st===0;
+  const q=cart[p.id]||0;const st=stock(p.id)-q;const out=st<=0;
   return `<div class="cell"><button class="tile ${p.k==="beb"?"small":""} ${q?"on":""} ${out?"out":""}" style="--c:${p.c}" data-add="${p.id}" aria-label="Agregar ${p.name}">
     ${icon(p)}
     <div><div class="name">${p.name}</div><div class="price">${money(config.prices[p.id])}</div>
-    ${st!==null?`<div class="stock ${st<=10?"low":""}">${out?"Agotada":"Quedan "+st}</div>`:""}</div>
+    <div class="stock ${stock(p.id)<=minOf(p.id)?"low":""}">${stock(p.id)===0?"Agotada":out?"No quedan más":"Quedan "+st}</div></div>
     ${q?`<span class="badge">${q}</span>`:""}
   </button>${q?`<button class="minus" data-minus="${p.id}" aria-label="Quitar ${p.name}">−</button>`:""}</div>`;
 }
@@ -754,6 +787,7 @@ function renderSell(){
     ${newAcct?`<div class="card"><label class="f" for="acctName">Nombre del cliente o mesa</label><div class="addrow"><input class="inp" id="acctName" maxlength="30" placeholder="Ej. Mesa 3, Carlos" autocomplete="off"><button class="btn primary sm" id="createAcct">Abrir</button><button class="btn sm" id="cancelAcct">Cancelar</button></div></div>`:""}
     ${acct?acctCard():`<div class="card"><label class="f" for="client">Cliente o mesa (opcional)</label><input class="inp" id="client" value="${esc(client)}" placeholder="Ej. Carlos" autocomplete="off"></div>`}
     <div class="goal"><div class="row"><span>Hoy: ${money(today.rev)} (${today.u} empanadas, ${today.b} bebidas)</span><span>Meta ${money(config.goal)}</span></div><div class="bar"><i style="width:${pct}%"></i></div>${(()=>{const pj=projection();if(!pj)return"";const ok=pj.val>=config.goal;return `<div class="proj ${ok?"up":"down"}">${ok?"✅":"⚠️"} Al ritmo de tus últimos días cerrarías en ${money(pj.val)}${ok?"":", "+money(config.goal-pj.val)+" bajo la meta"}</div>`})()}${open.length?`<div class="row" style="margin-top:8px;color:var(--brasa)"><span>Por cobrar en cuentas abiertas</span><span>${money(due)}</span></div>`:""}</div>
+    ${lowBanner()}
     <h2>Empanadas</h2>
     <div class="grid">${EMP.map(tileHTML).join("")}</div>
     <h2>Bebidas</h2>
@@ -812,26 +846,40 @@ function renderKitchen(){
 }
 
 /* Inventario */
+let showMins=false;
+function invCard(p,today,plan){const s=stock(p.id);const m=minOf(p.id);const cls=s===0?"zero":s<=m?"low":"ok";const pl=plan&&plan.find(x=>x.id===p.id);const avg=pl?pl.q/1.1:0;const lost=lostBy(dayStart(),Infinity)[p.id]||0;
+  return `<div class="invc" style="--c:${p.c}">
+    <div class="row"><div><div style="font-weight:800">${p.name}</div><div class="big">${s}</div><small class="m">mínimo ${m} · hoy vendidas ${today.by[p.id]||0}</small>${lost?`<br><span class="lost">🚫 ${lost} pedidos perdidos hoy por falta de stock</span>`:""}</div>
+    <span class="status ${cls}">${s===0?"Agotada":s<=m?"Bajo el mínimo":"Bien"}</span></div>
+    <div class="bar"><i style="width:${Math.min(100,s/Math.max(config.stockMax,m*2,1)*100)}%;background:${p.c}"></i></div>
+    ${avg?`<small class="m">Alcanza para ${(s/avg).toFixed(1)} días según tus ventas</small>`:""}
+    <div class="act"><input class="inp" type="number" min="0" inputmode="numeric" data-invq="${p.id}" placeholder="Cantidad" aria-label="Cantidad ${p.name}">
+    <button class="btn sm dark" data-invadd="${p.id}">Sumar</button>${isAdmin()?`<button class="btn sm" data-invset="${p.id}">Ajustar</button>`:""}</div>
+  </div>`}
+function minsPanel(){const perm="Notification" in window?Notification.permission:"na";
+  return `<div class="card"><h3>⚙️ Mínimos y alertas</h3><p class="sub" style="margin:0 0 8px">Cuando un producto llega a su mínimo: se marca en rojo, se avisa en caja y se puede enviar un WhatsApp al administrador. Con inventario en 0 no se pueden tomar pedidos de ese producto.</p>
+    <div class="minrow" style="font-weight:800;color:var(--muted);font-size:12px"><span>Producto</span><span>Mínimo</span><span>Hay</span></div>
+    ${PRODUCTS.map(p=>`<div class="minrow"><span style="font-weight:700">${p.name}</span><input class="inp" type="number" min="0" inputmode="numeric" data-min="${p.id}" value="${minOf(p.id)}" aria-label="Mínimo ${p.name}"><span>${stock(p.id)}</span></div>`).join("")}
+    <div class="row2" style="margin-top:12px"><div><label class="f" for="alertPhone">WhatsApp del administrador</label><input class="inp" id="alertPhone" inputmode="tel" placeholder="Ej. 0991234567" value="${esc(config.alertPhone)}"></div>
+    <div><label class="f" for="alertHour">Revisión diaria a las</label><input class="inp" id="alertHour" type="time" value="${esc(config.alertHour)}"></div></div>
+    <p class="sub" style="margin:8px 0 0">A esa hora, la caja muestra un resumen de lo que está bajo el mínimo (una vez al día) con el botón para avisar por WhatsApp. Déjala vacía para no programarla.</p>
+    <div class="stack" style="margin-top:12px"><button class="btn primary" id="saveMins">Guardar mínimos y alertas</button>
+    ${perm==="default"?`<button class="btn" id="notifOn">Activar notificaciones en este dispositivo</button>`:perm==="granted"?`<small class="m">🔔 Notificaciones activas en este dispositivo.</small>`:perm==="denied"?`<small class="m">🔕 Las notificaciones están bloqueadas en este navegador.</small>`:""}</div></div>`}
 function renderInv(){
   const today=stats(sales.filter(s=>s.t>=dayStart()&&!s.void));
   const plan=productionPlan(sales);
   $("#app").innerHTML=`
-    <h2>Inventario de empanadas</h2>
-    <p class="sub">Se descuenta solo con cada venta. Alerta cuando quedan 10 o menos.</p>
-    <div class="inv">${EMP.map(p=>{const s=stock(p.id);const cls=s===0?"zero":s<=10?"low":"ok";const avg=plan?plan.find(x=>x.id===p.id).q/1.1:0;
-      return `<div class="invc" style="--c:${p.c}">
-        <div class="row"><div><div style="font-weight:800">${p.name}</div><div class="big">${s}</div><small class="m">de ${config.stockMax} unidades, hoy vendidas ${today.by[p.id]}</small>${(lostBy(dayStart(),Infinity)[p.id]||0)?`<br><span class="lost">🚫 ${lostBy(dayStart(),Infinity)[p.id]} pedidos perdidos hoy por falta de stock</span>`:""}</div>
-        <span class="status ${cls}">${s===0?"Agotada":s<=10?"Stock bajo":"Bien"}</span></div>
-        <div class="bar"><i style="width:${Math.min(100,s/config.stockMax*100)}%;background:${p.c}"></i></div>
-        ${avg?`<small class="m">Alcanza para ${(s/avg).toFixed(1)} días según tus ventas</small>`:""}
-        <div class="act"><input class="inp" type="number" min="0" inputmode="numeric" data-invq="${p.id}" placeholder="Cantidad" aria-label="Cantidad ${p.name}">
-        <button class="btn sm dark" data-invadd="${p.id}">Sumar</button>${isAdmin()?`<button class="btn sm" data-invset="${p.id}">Ajustar</button>`:""}</div>
-      </div>`}).join("")}</div>
-    <div class="stack" style="margin-top:14px" ${isAdmin()?"":"hidden"}><button class="btn primary" id="refill">Reponer todas a ${config.stockMax} unidades</button></div>
-    <p class="sub" style="margin-top:12px">"Sumar" agrega lo que acabas de hornear. "Ajustar" pone el número exacto que contaste.</p>`;
+    <div style="display:flex;align-items:center;gap:10px;justify-content:space-between"><h2>Inventario</h2>${isAdmin()?`<button class="btn sm ${showMins?"dark":""}" id="minsBtn">⚙️ Mínimos y alertas</button>`:""}</div>
+    <p class="sub">Se descuenta solo con cada venta. Sin inventario no se pueden tomar pedidos.</p>
+    ${isAdmin()&&showMins?minsPanel():""}
+    ${lowBanner()}
+    <h3>Empanadas</h3><div class="inv">${EMP.map(p=>invCard(p,today,plan)).join("")}</div>
+    <h3 style="margin-top:16px">Bebidas</h3><div class="inv">${BEB.map(p=>invCard(p,today,null)).join("")}</div>
+    <div class="stack" style="margin-top:14px" ${isAdmin()?"":"hidden"}><button class="btn primary" id="refill">Reponer todo a ${config.stockMax} unidades</button></div>
+    <p class="sub" style="margin-top:12px">"Sumar" agrega lo que acabas de hornear o comprar. "Ajustar" pone el número exacto que contaste.</p>`;
 }
 async function setStock(changes){
-  const base={};EMP.forEach(p=>base[p.id]=stock(p.id));Object.assign(base,changes);
+  const base={};PRODUCTS.forEach(p=>base[p.id]=stock(p.id));Object.assign(base,changes);
   inv={base,since:Date.now()};await saveInv();
 }
 
@@ -1125,7 +1173,7 @@ function renderSettings(){
   $("#app").innerHTML=`
     <h2>Ajustes</h2>
     <div class="card"><h3>💾 Respaldo</h3><p class="sub" style="margin:0 0 10px">Guarda una copia de todas las ventas, cuentas, turnos, cierres e inventario. Hazlo al menos una vez por semana y guárdala en tu correo o en Drive.<br><b>Último respaldo en este dispositivo:</b> ${lastBackupTxt()}</p>
-      <div class="row2"><button class="btn primary" id="bkJson">Respaldo completo</button><button class="btn" id="bkCsv">Ventas para Excel</button></div></div>
+      <div class="row2"><button class="btn primary" id="bkJson">Respaldo completo</button><button class="btn" id="bkCsv">Ventas para Excel</button></div>${db?"":`<label class="btn" style="display:block;text-align:center;cursor:pointer;margin-top:10px">Restaurar un respaldo<input type="file" id="restore" accept=".json,application/json" hidden></label>`}</div>
     ${authUser?`<div class="card"><h3>🔒 Seguridad</h3><p class="sub" style="margin:0 0 10px">Este dispositivo está conectado como <b>${esc(authUser.email)}</b>. Si pierdes o cambias un dispositivo, cambia la contraseña en Firebase.</p><button class="btn danger" id="authOut">Cerrar sesión de este dispositivo</button></div>`:""}
     <div class="card"><h3>Precios y costos</h3><p class="sub" style="margin:0 0 6px">El costo sirve para calcular la ganancia estimada.</p>
       <div class="frow head"><span>Producto</span><span>Precio $</span><span>Costo $</span></div>
@@ -1158,10 +1206,6 @@ function renderSettings(){
       <div><label class="f" for="kc">Nueva clave Cocina</label><input class="inp pin" id="kc" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></div></div>
       <button class="btn dark" style="width:100%;margin-top:10px" id="saveKeys">Cambiar claves</button>
     </div>
-    <div class="card"><h3>Copia de seguridad</h3>
-      <p class="sub" style="margin:0 0 10px">${db?"Descarga todos tus datos en un archivo por si los necesitas.":"Tus datos viven solo en este navegador. Si se borra el historial del navegador, se pierden. Descarga una copia cada semana."}</p>
-      <div class="row2"><button class="btn dark" id="backup">Descargar copia</button>${db?"":`<label class="btn" style="text-align:center;cursor:pointer">Restaurar copia<input type="file" id="restore" accept=".json,application/json" hidden></label>`}</div>
-    </div>
     <div class="stack">
       <button class="btn" id="demoToggle">${demo?"Ver mis datos reales":"Probar el análisis con datos de ejemplo"}</button>
       <button class="btn danger" id="wipe">Borrar todas las ventas</button>
@@ -1173,7 +1217,11 @@ function renderSettings(){
 document.addEventListener("keydown",e=>{if(!$("#askBox").hidden){if(e.key==="Escape")askDone($("#askIn").hidden?false:null);if(e.key==="Enter")$("#askYes").click();return}if(e.key==="Enter"&&e.target.id==="acctName")$("#createAcct").click();if(e.key==="Escape"&&!$("#modal").hidden)closePreview();if(e.key==="Enter"&&e.target.id==="pin")tryLogin();if(e.key==="Enter"&&(e.target.id==="aemail"||e.target.id==="apass"))authLogin();if(e.key==="Enter"&&e.target.id==="nc")$("#createKeys")?.click();if(e.key==="Enter"&&e.target.id==="newStaff")$("#addStaff").click();if(e.key==="Enter"&&e.target.id==="newCook")$("#addCook").click()});
 document.addEventListener("change",async e=>{
   if(e.target.id!=="restore"||db||!isAdmin())return;const f=e.target.files[0];if(!f)return;
-  try{const d=JSON.parse(await f.text());if(d.app!=="empanadictos"||!Array.isArray(d.sales))throw 0;
+  try{const d=JSON.parse(await f.text());
+    if(String(d.app).toLowerCase()!=="empanadictos")throw 0;
+    if(Array.isArray(d.ventas)){d.sales=d.ventas;d.exported=Date.parse(d.fecha)||Date.now();d.inv=d.inventario;
+      if(Array.isArray(d.cierres)){const m={};d.cierres.forEach(c=>{const{id,...v}=c;m[id]=v});d.cierres=m}}
+    if(!Array.isArray(d.sales))throw 0;
     if(!await ask(`Restaurar la copia del ${new Date(d.exported).toLocaleString("es")}? Reemplaza todos los datos actuales de este navegador.`,{ok:"Restaurar",danger:true}))return;
     config=mergeCfg(d.config);sales=d.sales||[];cierres=d.cierres||{};inv=d.inv||inv;claves=d.claves||claves;turnos=d.turnos||[];cuentas=d.cuentas||[];perdidas=d.perdidas||[];saveLocal();toast("Copia restaurada");restoreSession();render()}
   catch(err){toast("Ese archivo no es una copia válida de la app",true)}
@@ -1193,6 +1241,11 @@ document.addEventListener("click",async ev=>{
   if(b.id==="closeModal"){closePreview();return}
   if(b.id==="pdf"){makePdf(b);return}
   if(b.id==="logout"){logout();return}
+  if(b.id==="minsBtn"){showMins=!showMins;render();return}
+  if(b.id==="notifOn"){try{await Notification.requestPermission()}catch(e){}render();return}
+  if(b.id==="saveMins"){if(!isAdmin())return;const mins={};document.querySelectorAll("[data-min]").forEach(i=>{mins[i.dataset.min]=Math.max(0,parseInt(i.value,10)||0)});
+    config.mins={...config.mins,...mins};config.alertPhone=$("#alertPhone").value.trim().slice(0,20);config.alertHour=$("#alertHour").value||"";
+    try{await saveConfig();lastLows=null;checkLowAlerts();toast("Mínimos y alertas guardados")}catch(e){toast("No se pudo guardar",true)}showMins=false;render();return}
   if(b.id==="bkJson"){makeBackup("json",b);return}
   if(b.id==="bkCsv"){makeBackup("csv",b);return}
   if(b.id==="authEnter"){authLogin();return}
@@ -1232,8 +1285,8 @@ document.addEventListener("click",async ev=>{
     renderSettings();return;
   }
   if(b.dataset.tab){if(b.dataset.tab!=="vender")charging=false;tab=b.dataset.tab;if(tab==="cocina")seenPending=new Set(sales.filter(s=>s.status==="pendiente").map(s=>s.id));render();window.scrollTo(0,0);return}
-  if(b.dataset.add){const id=b.dataset.add;if(P(id).k==="emp"&&(cart[id]||0)>=stock(id)){
-      const ok=await ask(`${P(id).name} está agotada. ¿El cliente la pidió? Se registra como venta perdida para planear mejor la producción.`,{ok:"Registrar venta perdida"});
+  if(b.dataset.add){const id=b.dataset.add;if((cart[id]||0)>=stock(id)){
+      const ok=await ask(stock(id)>0?`Solo quedan ${stock(id)} de ${P(id).name} y ya están en este pedido. ¿El cliente pidió más? Se registra como venta perdida.`:`${P(id).name} está agotada. ¿El cliente la pidió? Se registra como venta perdida para planear mejor la producción.`,{ok:"Registrar venta perdida"});
       if(ok){const r={t:Date.now(),p:id,by:who||""};try{if(db)await db.collection("perdidas").add(r);else{r.id="p"+r.t;perdidas.unshift(r);saveLocal()}toast("Venta perdida registrada")}catch(e){}}
       return}cart[id]=(cart[id]||0)+1;renderSell();return}
   if(b.dataset.minus){const k=b.dataset.minus;cart[k]--;if(cart[k]<=0)delete cart[k];renderSell();return}
@@ -1249,6 +1302,7 @@ document.addEventListener("click",async ev=>{
     b.disabled=true;try{const id=await addCuenta({name:n,status:"abierta",tOpen:Date.now(),openedBy:who||""});acct=id;newAcct=false;toast(`Cuenta "${n}" abierta`)}catch(e){toast("No se pudo abrir la cuenta",true)}
     renderSell();return}
   if(b.id==="sendAcct"){const c=cuentas.find(x=>x.id===acct);if(!c)return;
+    const falta=shortfalls(cart);if(falta.length){falta.forEach(f=>{if(f.s>0)cart[f.id]=f.s;else delete cart[f.id]});render();toast("No hay inventario suficiente: "+falta.map(f=>`${P(f.id).name} (quedan ${f.s})`).join(", ")+". Ajusté el pedido.",true);return}
     const items={...cart};const total=cartTotal();const t=Date.now();const num=nextNum();const hasEmp=Object.keys(items).some(f=>P(f).k==="emp");
     b.disabled=true;
     try{await addSale({t,num,items,total,pay:null,paid:false,tPaid:null,paidBy:"",cuenta:c.id,ronda:acctOrders(c.id).length+1,cashier:who||"",client:c.name,status:hasEmp?"pendiente":"entregado",cook:null,tStart:null,tReady:null,tDone:hasEmp?null:t});
@@ -1272,6 +1326,7 @@ document.addEventListener("click",async ev=>{
       toast("Cuenta anulada");acct=null;charging=false}catch(e){toast("No se pudo anular",true)}
     render();return}
   if(b.id==="cobrar"){
+    const falta=shortfalls(cart);if(falta.length){falta.forEach(f=>{if(f.s>0)cart[f.id]=f.s;else delete cart[f.id]});render();toast("No hay inventario suficiente: "+falta.map(f=>`${P(f.id).name} (quedan ${f.s})`).join(", ")+". Ajusté el pedido.",true);return}
     const items={...cart};const total=Math.round(Object.entries(items).reduce((a,[f,q])=>a+q*config.prices[f],0)*100)/100;
     const t=Date.now();const num=nextNum();
     const hasEmp=Object.keys(items).some(f=>P(f).k==="emp");
@@ -1297,7 +1352,7 @@ document.addEventListener("click",async ev=>{
     await setStock({[id]:b.dataset.invadd?stock(id)+v:v}).catch(()=>toast("No se pudo guardar",true));
     toast(`${P(id).name}: ${stock(id)} unidades`);render();return;
   }
-  if(b.id==="refill"){if(!isAdmin()){toast("Solo un administrador puede hacer esto",true);return}if(!await ask(`¿Poner todas las empanadas en ${config.stockMax} unidades?`))return;await setStock(Object.fromEntries(EMP.map(p=>[p.id,config.stockMax]))).catch(()=>toast("No se pudo guardar",true));toast("Inventario repuesto");render();return}
+  if(b.id==="refill"){if(!isAdmin()){toast("Solo un administrador puede hacer esto",true);return}if(!await ask(`¿Poner todos los productos en ${config.stockMax} unidades?`))return;await setStock(Object.fromEntries(PRODUCTS.map(p=>[p.id,config.stockMax]))).catch(()=>toast("No se pudo guardar",true));toast("Inventario repuesto");render();return}
   if(b.dataset.day){cajaDay+=Number(b.dataset.day)*DAY;cajaDay=dayStart(new Date(cajaDay+36e5*3));renderCaja();return}
   if(b.id==="cerrar"){
     const {st}=dayData(cajaDay);const fondo=parseFloat($("#fondo").value)||0;const cv=$("#contado").value;
@@ -1333,6 +1388,7 @@ document.addEventListener("click",async ev=>{
     toast("Ventas borradas");render();
   }
 });
+setInterval(checkDailyReview,30000);setTimeout(checkDailyReview,5000);
 setInterval(()=>{
   if(tab!=="cocina")return;const now=Date.now();
   document.querySelectorAll("[data-since]").forEach(el=>{const ms=now-Number(el.dataset.since);el.textContent=mmss(ms);const t=el.closest(".ticket");t.classList.remove("ok","mid","late");t.classList.add(tClass(ms))});

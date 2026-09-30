@@ -31,20 +31,34 @@ Funciona en celular, tablet o computadora, directamente en el navegador.
 > ⚠️ Sin el paso 3, cada dispositivo guarda sus propios datos. La caja y la cocina
 > **no** se verán entre sí si están en dispositivos distintos.
 
-## 3. Sincronizar caja y cocina (Firebase, gratis)
+## 3. Sincronizar caja y cocina con seguridad (Firebase, gratis)
 
-1. Entra a https://console.firebase.google.com → **Agregar proyecto** → nombre `empanadictos` (puedes desactivar Analytics).
-2. Menú **Compilación → Firestore Database → Crear base de datos** → ubicación cercana (ej. `southamerica-east1`) → modo **producción**.
-3. Pestaña **Reglas**: pega el contenido de `firestore.rules` → **Publicar**.
-4. Ve a ⚙️ **Configuración del proyecto → Tus apps → Web (`</>`)** → registra la app → copia el bloque `firebaseConfig`.
-5. En GitHub abre `firebase-config.js` → ✏️ editar → pega los valores (apiKey, projectId, etc.) → **Commit changes**.
-6. Recarga la app: arriba a la derecha dirá **"Guardado en la nube"**.
+1. Entra a https://console.firebase.google.com → **Agregar proyecto** → `empanadictos` (puedes desactivar Analytics).
+2. **Compilación → Authentication → Comenzar → Correo electrónico/contraseña → Habilitar → Guardar.**
+3. En **Authentication → Usuarios → Agregar usuario**: crea la cuenta del negocio (correo + contraseña larga).
+4. **Compilación → Firestore Database → Crear base de datos** → ubicación cercana → modo **producción**.
+5. Pestaña **Reglas**: pega `firestore.rules` (ya trae el correo autorizado; para otra cuenta agrégala a la lista) → **Publicar**.
+6. ⚙️ **Configuración del proyecto → Tus apps → Web (`</>`)** → registra la app → copia los valores de `firebaseConfig` en `firebase-config.js`.
+7. En **Authentication → Configuración → Dominios autorizados** confirma que esté `TU-USUARIO.github.io`.
 
-El plan gratuito de Firebase (Spark) alcanza de sobra para un local: 50.000 lecturas y 20.000 escrituras por día.
+Cuando abras la app pedirá **correo y contraseña** (una sola vez por dispositivo). Después, cada persona entra con la clave de Ventas o de Cocina como siempre.
+
+## Uso diario
+
+- **Vender**: toca los productos y **Cobrar** (venta rápida) o **Abrir cuenta** para mesas que pagan al final. Los pedidos con empanadas llegan solos a Cocina.
+- **Cocina**: entra con la clave de Cocina; cada comanda pasa por *Empezar → Marcar listo → Entregado*, en orden de llegada.
+- **Inventario**: se descuenta con cada venta. *Sumar* agrega lo que se hornea o compra; *Ajustar* pone el conteo exacto. **Sin inventario no se pueden tomar pedidos** de ese producto (se registra como venta perdida).
+- **⚙️ Mínimos y alertas** (administrador, en Inventario): define el mínimo de cada producto, el WhatsApp del administrador y la hora de revisión diaria. Al llegar al mínimo: aviso en caja, botón para enviar WhatsApp y notificación en los dispositivos del administrador que la activen.
+- **Caja**: al final del día cuenta el efectivo y toca **Cerrar caja**; puedes ver y compartir el reporte ejecutivo.
+- **Análisis**: ventas, horas fuertes, rendimiento de cocina y recomendaciones.
+- **Ajustes → 💾 Respaldo**: descarga una copia completa o las ventas para Excel. Hazlo cada semana.
+
+> Primer uso: en Inventario, ajusta el conteo real de cada empanada y bebida.
 
 ## Seguridad
 
-- Las claves de Ventas y Cocina se guardan cifradas (SHA-256).
-- Las reglas de `firestore.rules` limitan el acceso a las colecciones de la app, pero quien tenga
-  la dirección de la web y conocimientos técnicos podría leer los datos. Para un local pequeño
-  suele ser suficiente; si quieres más protección, se puede agregar inicio de sesión con Firebase Auth.
+- Sin iniciar sesión con una cuenta autorizada nadie puede leer ni cambiar datos, aunque tenga el enlace.
+- Las claves de Ventas y Cocina se guardan cifradas (SHA-256) y bloquean tras 5 intentos.
+- Los datos de `firebase-config.js` no son secretos: la protección la dan las reglas y el inicio de sesión.
+- Si pierdes un dispositivo: cambia la contraseña en Firebase → Authentication.
+- Ajustes → Seguridad → **Cerrar sesión de este dispositivo**.
