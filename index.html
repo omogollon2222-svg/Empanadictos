@@ -395,11 +395,49 @@ let db=null, dl=null, loaded=false, seenPending=null;
 let authNeeded=false, authUser=null, authBusy=false;
 
 /* ---------- Almacenamiento ---------- */
-function mergeCfg(c){c=c||{};return{prices:{...DEFAULT_CONFIG.prices,...(c.prices||{})},costs:{...DEFAULT_CONFIG.costs,...(c.costs||{})},goal:Number(c.goal)||DEFAULT_CONFIG.goal,cooks:Array.isArray(c.cooks)&&c.cooks.length?c.cooks:DEFAULT_CONFIG.cooks,staff:Array.isArray(c.staff)&&c.staff.length?c.staff:DEFAULT_CONFIG.staff,target:Number(c.target)||DEFAULT_CONFIG.target,stockMax:Number(c.stockMax)||50,mins:{...DEFAULT_CONFIG.mins,...(c.mins||{})},alertPhone:String(c.alertPhone||""),alertHour:typeof c.alertHour==="string"?c.alertHour:DEFAULT_CONFIG.alertHour,comanda:c.comanda!==false}}
+function mergeCfg(c){c=c||{};return{prices:{...DEFAULT_CONFIG.prices,...(c.prices||{})},costs:{...DEFAULT_CONFIG.costs,...(c.costs||{})},goal:Number(c.goal)||DEFAULT_CONFIG.goal,cooks:Array.isArray(c.cooks)&&c.cooks.length?c.cooks:DEFAULT_CONFIG.cooks,staff:Array.isArray(c.staff)&&c.staff.length?c.staff:DEFAULT_CONFIG.staff,target:Number(c.target)||DEFAULT_CONFIG.target,stockMax:Number(c.stockMax)||50,mins:{...DEFAULT_CONFIG.mins,...(c.mins||{})},alertPhone:String(c.alertPhone||""),alertHour:typeof c.alertHour==="string"?c.alertHour:DEFAULT_CONFIG.alertHour,comanda:c.comanda!==false,resetAt:Number(c.resetAt)||0}}
 function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LS)||"null");if(s){config=mergeCfg(s.config);sales=s.sales||[];cierres=s.cierres||{};if(s.inv)inv=s.inv;if(s.claves)claves=s.claves;if(s.turnos)turnos=s.turnos;if(s.cuentas)cuentas=s.cuentas;if(s.perdidas)perdidas=s.perdidas;}}catch(e){}}
 function saveLocal(){if(db)return;try{localStorage.setItem(LS,JSON.stringify({config,sales,cierres,inv,claves,turnos,cuentas,perdidas}))}catch(e){}}
 loadLocal();
 window.addEventListener("storage",e=>{if(db||e.key!==LS)return;const pend=seenPending;loadLocal();if(acct&&!cuentas.some(c=>c.id===acct&&c.status==="abierta")){acct=null;charging=false}notifyNew();restoreSession();if(!(tab==="vender"&&document.activeElement&&document.activeElement.tagName==="INPUT"))render()});
+
+/* ---------- Ventas en la nube con copia en el dispositivo ----------
+   Cada dispositivo guarda una copia de TODAS las ventas (IndexedDB) y al abrir
+   solo descarga las ventas nuevas o cambiadas (campo u = última modificación).
+   La primera vez descarga todo una sola vez. Así se ahorran casi todas las lecturas. */
+let salesAll=new Map(), syncMeta={};
+const IDB_NAME="emp_cache_"+((window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.projectId)||"local");
+let idbP=null;
+function idbOpen(){return idbP||(idbP=new Promise((res,rej)=>{const r=indexedDB.open(IDB_NAME,1);
+  r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore("ventas",{keyPath:"id"});d.createObjectStore("meta")};
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))}
+async function cacheLoad(){const d=await idbOpen();return new Promise((res,rej)=>{const t=d.transaction(["ventas","meta"]);const out={rows:[],meta:{}};
+  t.objectStore("ventas").getAll().onsuccess=e=>out.rows=e.target.result||[];t.objectStore("meta").get("m").onsuccess=e=>out.meta=e.target.result||{};
+  t.oncomplete=()=>res(out);t.onerror=()=>rej(t.error)})}
+async function cachePut(rows,meta,clear){const d=await idbOpen();return new Promise((res,rej)=>{const t=d.transaction(["ventas","meta"],"readwrite");const st=t.objectStore("ventas");
+  if(clear)st.clear();rows.forEach(r=>st.put(r));if(meta)t.objectStore("meta").put(meta,"m");t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+async function cacheClear(){try{if(idbP)(await idbP).close()}catch(e){}idbP=null;await new Promise(r=>{try{const q=indexedDB.deleteDatabase(IDB_NAME);q.onsuccess=q.onerror=q.onblocked=()=>r()}catch(e){r()}})}
+function refreshSales(){const from=dayStart()-62*DAY;sales=[...salesAll.values()].filter(s=>s.t>=from).sort((a,b)=>b.t-a.t)}
+const allSalesList=()=>db?[...salesAll.values()]:sales;
+async function startSalesSync(){
+  let c={rows:[],meta:{}};try{c=await cacheLoad()}catch(e){}
+  salesAll=new Map(c.rows.map(r=>[r.id,r]));syncMeta=c.meta||{};
+  if(!syncMeta.full){ /* primera vez en este dispositivo: descarga todo una sola vez */
+    $("#sync").textContent="Descargando ventas…";
+    const snap=await db.collection("ventas").get();salesAll=new Map(snap.docs.map(x=>[x.id,{id:x.id,...x.data()}]));
+    syncMeta={full:Date.now(),last:Math.max(0,...[...salesAll.values()].map(v=>v.u||v.t||0))};
+    try{await cachePut([...salesAll.values()],syncMeta,true)}catch(e){}
+    $("#sync").textContent=authUser?"🔒 "+authUser.email:"Guardado en la nube";
+  }
+  refreshSales();loaded=true;notifyNew();render();
+  const since=Math.max(0,(syncMeta.last||0)-15*60000);
+  const apply=snap=>{const ch=[];
+    snap.docChanges().forEach(x=>{if(x.type==="removed")return;const v={id:x.doc.id,...x.doc.data()};salesAll.set(v.id,v);ch.push(v);syncMeta.last=Math.max(syncMeta.last||0,v.u||0)});
+    if(!ch.length)return;refreshSales();notifyNew();render();cachePut(ch,syncMeta).catch(()=>{})};
+  const fail=()=>{$("#sync").textContent="Sin conexión"};
+  db.collection("ventas").where("u",">=",since).onSnapshot(apply,fail);   /* solo lo nuevo o cambiado */
+  db.collection("ventas").where("t",">=",dayStart()).onSnapshot(apply,fail); /* respaldo: todo lo de hoy */
+}
 
 (async()=>{
   await new Promise(r=>setTimeout(r,0));
@@ -430,16 +468,16 @@ window.addEventListener("storage",e=>{if(db||e.key!==LS)return;const pend=seenPe
     db=d; sales=[]; cierres={}; claves=null; turnos=[]; cuentas=[]; perdidas=[];
     db.doc("tienda/claves").onSnapshot(s=>{claves=s.exists?s.data():null;clavesLoaded=true;restoreSession();render()},()=>{clavesLoaded=true;render()});
     $("#sync").textContent=authUser?"🔒 "+authUser.email:"Guardado en la nube";
-    db.collection("ventas").where("t",">=",dayStart()-62*DAY).orderBy("t","desc").onSnapshot(snap=>{
-      sales=snap.docs.map(x=>({id:x.id,...x.data()}));
-      notifyNew(); loaded=true; render();
-    },()=>{$("#sync").textContent="Sin conexión"});
-    db.doc("tienda/config").onSnapshot(s=>{if(s.exists){config=mergeCfg(s.data());render()}},()=>{});
+    startSalesSync().catch(()=>{$("#sync").textContent="Sin conexión"});
+    db.doc("tienda/config").onSnapshot(s=>{if(s.exists){config=mergeCfg(s.data());
+      /* Si un administrador borró las ventas, este dispositivo descarta su copia y vuelve a descargar */
+      if(syncMeta.full&&config.resetAt>syncMeta.full){cacheClear().then(()=>location.reload());return}
+      render()}},()=>{});
     db.doc("tienda/inventario").onSnapshot(s=>{if(s.exists){const v=s.data();inv={base:{...inv.base,...(v.base||{})},since:v.since||0};render()}},()=>{});
-    db.collection("perdidas").orderBy("t","desc").limit(1000).onSnapshot(snap=>{perdidas=snap.docs.map(x=>({id:x.id,...x.data()}));if(role==="ventas"&&tab!=="vender")render()},()=>{});
-    db.collection("cuentas").orderBy("tOpen","desc").limit(300).onSnapshot(snap=>{cuentas=snap.docs.map(x=>({id:x.id,...x.data()}));if(acct&&!cuentas.some(c=>c.id===acct&&c.status==="abierta")){acct=null;charging=false}if(role==="ventas")render()},()=>{});
-    db.collection("turnos").orderBy("tIn","desc").limit(500).onSnapshot(snap=>{turnos=snap.docs.map(x=>({id:x.id,...x.data()}));if(role&&(tab==="caja"||tab==="analisis"||tab==="cocina"))render()},()=>{});
-    db.collection("cierres").onSnapshot(snap=>{cierres={};snap.docs.forEach(x=>cierres[x.id]=x.data());if(tab==="caja")render()},()=>{});
+    db.collection("perdidas").where("t",">=",dayStart()-62*DAY).orderBy("t","desc").onSnapshot(snap=>{perdidas=snap.docs.map(x=>({id:x.id,...x.data()}));if(role==="ventas"&&tab!=="vender")render()},()=>{});
+    db.collection("cuentas").where("tOpen",">=",dayStart()-62*DAY).orderBy("tOpen","desc").onSnapshot(snap=>{cuentas=snap.docs.map(x=>({id:x.id,...x.data()}));if(acct&&!cuentas.some(c=>c.id===acct&&c.status==="abierta")){acct=null;charging=false}if(role==="ventas")render()},()=>{});
+    db.collection("turnos").where("tIn",">=",dayStart()-62*DAY).orderBy("tIn","desc").onSnapshot(snap=>{turnos=snap.docs.map(x=>({id:x.id,...x.data()}));if(role&&(tab==="caja"||tab==="analisis"||tab==="cocina"))render()},()=>{});
+    db.collection("cierres").where("closedAt",">=",dayStart()-120*DAY).onSnapshot(snap=>{cierres={};snap.docs.forEach(x=>cierres[x.id]=x.data());if(tab==="caja")render()},()=>{});
   }catch(e){clavesLoaded=true;restoreSession();render()}
 })();
 
@@ -531,8 +569,8 @@ async function tryLogin(){
   else{fails++;$("#pin").value="";if(fails>=5){lockUntil=Date.now()+30000;fails=0;err.textContent="Demasiados intentos. Espera 30 segundos."}else err.textContent="Clave incorrecta"}
 }
 
-async function addSale(s){if(db){await db.collection("ventas").add(s)}else{s.id="l"+Date.now()+Math.random().toString(36).slice(2,6);sales.unshift(s);saveLocal()}}
-async function patchSale(id,p){if(db){await db.collection("ventas").doc(id).update(p)}else{const s=sales.find(x=>x.id===id);Object.assign(s,p);saveLocal()}}
+async function addSale(s){s.u=Date.now();if(db){await db.collection("ventas").add(s)}else{s.id="l"+Date.now()+Math.random().toString(36).slice(2,6);sales.unshift(s);saveLocal()}}
+async function patchSale(id,p){p={...p,u:Date.now()};if(db){await db.collection("ventas").doc(id).update(p)}else{const s=sales.find(x=>x.id===id);Object.assign(s,p);saveLocal()}}
 async function addCuenta(c){if(db){const r=await db.collection("cuentas").add(c);return r.id}c.id="c"+Date.now()+Math.random().toString(36).slice(2,5);cuentas.unshift(c);saveLocal();return c.id}
 async function patchCuenta(id,p){if(db){await db.collection("cuentas").doc(id).update(p)}else{const c=cuentas.find(x=>x.id===id);Object.assign(c,p);saveLocal()}}
 const isPaid=s=>s.paid!==false&&!s.void;
@@ -1104,7 +1142,7 @@ async function driveExport(btn){
   btn.disabled=true;const old=btn.textContent;btn.textContent="Preparando archivo…";
   try{
     await xlsxLib();
-    const ventas=(await allDocs("ventas",sales)).sort((a,b)=>a.t-b.t);
+    const ventas=allSalesList().slice().sort((a,b)=>a.t-b.t);
     const r2=v=>Math.round((v||0)*100)/100;
     const hora=t=>new Date(t).toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"});
     const estado=v=>v.void?"Anulado":v.paid===false?"Por cobrar":"Pagado";
@@ -1143,7 +1181,7 @@ async function driveExport(btn){
 async function makeBackup(kind,btn){
   btn.disabled=true;const old=btn.textContent;btn.textContent="Preparando…";
   try{
-    const ventas=(await allDocs("ventas",sales)).sort((a,b)=>a.t-b.t);
+    const ventas=allSalesList().slice().sort((a,b)=>a.t-b.t);
     const stamp=dkey(Date.now());
     if(kind==="json"){
       const [cu,tu,pe,ci]=await Promise.all([allDocs("cuentas",cuentas),allDocs("turnos",turnos),allDocs("perdidas",perdidas),db?allDocs("cierres",[]):Object.entries(cierres).map(([id,v])=>({id,...v}))]);
@@ -1306,7 +1344,7 @@ document.addEventListener("click",async ev=>{
   if(b.id==="bkCsv"){makeBackup("csv",b);return}
   if(b.id==="authEnter"){authLogin();return}
   if(b.id==="authReset"){authReset();return}
-  if(b.id==="authOut"){if(await ask("¿Cerrar la sesión segura de este dispositivo? Tendrás que volver a escribir el correo y la contraseña.",{ok:"Cerrar sesión",danger:true})){if(shiftId)await endShift(shiftId);try{ssDel()}catch(e){}await firebase.auth().signOut()}return}
+  if(b.id==="authOut"){if(await ask("¿Cerrar la sesión segura de este dispositivo? Tendrás que volver a escribir el correo y la contraseña.",{ok:"Cerrar sesión",danger:true})){if(shiftId)await endShift(shiftId);try{ssDel()}catch(e){}await cacheClear();await firebase.auth().signOut()}return}
   if(b.dataset.me!==undefined&&pendingRole){setSession(pendingRole,b.dataset.me);toast("Hola, "+b.dataset.me);render();window.scrollTo(0,0);return}
   if(b.id==="backLogin"){pendingRole=null;renderGate();return}
   if(b.dataset.login){loginRole=b.dataset.login;renderGate();return}
@@ -1443,7 +1481,9 @@ document.addEventListener("click",async ev=>{
   }
   if(b.id==="wipe"){if(!isAdmin()){toast("Solo un administrador puede hacer esto",true);return}
     if(!await ask("Se borrarán todas las ventas, cuentas y ventas perdidas. Descarga antes una copia si la necesitas. ¿Continuar?",{ok:"Borrar todo",danger:true}))return;
-    if(db){for(const s of[...sales]){try{await db.collection("ventas").doc(s.id).delete()}catch(e){}}for(const c of[...cuentas]){try{await db.collection("cuentas").doc(c.id).delete()}catch(e){}}}else{sales=[];cuentas=[];perdidas=[];saveLocal()}acct=null;charging=false;
+    if(db){const del=async col=>{const sn=await db.collection(col).get();for(const x of sn.docs){try{await x.ref.delete()}catch(e){}}};
+      try{await del("ventas");await del("cuentas");await del("perdidas")}catch(e){}
+      config.resetAt=Date.now();try{await saveConfig()}catch(e){}return}else{sales=[];cuentas=[];perdidas=[];saveLocal()}acct=null;charging=false;
     toast("Ventas borradas");render();
   }
 });

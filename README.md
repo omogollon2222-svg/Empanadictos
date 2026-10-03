@@ -57,6 +57,13 @@ Cuando abras la app pedirá **correo y contraseña** (una sola vez por dispositi
 
 > Primer uso: en Inventario, ajusta el conteo real de cada empanada y bebida.
 
+## Dónde se guardan los datos
+
+- **En la nube (Firebase):** todas las ventas, inventario, cierres y cuentas. Es la copia oficial.
+- **En cada dispositivo:** una copia de todas las ventas. Al abrir la app solo se descargan las ventas nuevas o cambiadas, así el plan gratuito alcanza de sobra. La primera vez en cada celular descarga todo una sola vez.
+- **En Excel / Drive:** Ajustes → 💾 Respaldo en Excel crea **un solo archivo** con **todas** las ventas (desde el primer día), el resumen por día y el inventario.
+- Después de actualizar la app, recarga la página en todos los dispositivos.
+
 ## Seguridad
 
 - Sin iniciar sesión con una cuenta autorizada nadie puede leer ni cambiar datos, aunque tenga el enlace.
