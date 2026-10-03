@@ -52,8 +52,8 @@ Cuando abras la app pedirá **correo y contraseña** (una sola vez por dispositi
 - **⚙️ Mínimos y alertas** (administrador, en Inventario): define el mínimo de cada producto, el WhatsApp del administrador y la hora de revisión diaria. Al llegar al mínimo: aviso en caja, botón para enviar WhatsApp y notificación en los dispositivos del administrador que la activen.
 - **Caja**: al final del día cuenta el efectivo y toca **Cerrar caja**; puedes ver y compartir el reporte ejecutivo.
 - **Análisis**: ventas, horas fuertes, rendimiento de cocina y recomendaciones.
-- **Ajustes → 📁 Google Drive**: crea un solo archivo Excel con 3 hojas (Ventas, Resumen por día, Inventario). En el celular se abre el menú de compartir: elige **Drive**. En computadora se descarga y se sube a drive.google.com. Hazlo al cerrar cada día o cada semana.
-- **Ajustes → 💾 Respaldo**: descarga una copia completa o las ventas para Excel. Hazlo cada semana.
+- **Ajustes → 💾 Respaldo en Excel**: crea un solo archivo Excel con 3 hojas (Ventas, Resumen por día, Inventario). En el celular se abre el menú de compartir: elige **Drive**. En computadora se descarga y se sube a drive.google.com. Hazlo al cerrar cada día o cada semana.
+- La **copia técnica (.json)** en Ajustes solo sirve para restaurar la app; no se abre en Excel.
 
 > Primer uso: en Inventario, ajusta el conteo real de cada empanada y bebida.
 
