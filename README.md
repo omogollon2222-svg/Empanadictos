@@ -46,6 +46,7 @@ Cuando abras la app pedirá **correo y contraseña** (una sola vez por dispositi
 ## Uso diario
 
 - **Vender**: toca los productos y **Cobrar** (venta rápida) o **Abrir cuenta** para mesas que pagan al final. Los pedidos con empanadas llegan solos a Cocina.
+- **Modo comanda** (interruptor arriba en Vender): encendido, los pedidos con empanadas van a la pantalla de Cocina; apagado, las ventas se registran como entregadas al instante (útil si una sola persona atiende y cocina).
 - **Cocina**: entra con la clave de Cocina; cada comanda pasa por *Empezar → Marcar listo → Entregado*, en orden de llegada.
 - **Inventario**: se descuenta con cada venta. *Sumar* agrega lo que se hornea o compra; *Ajustar* pone el conteo exacto. **Sin inventario no se pueden tomar pedidos** de ese producto (se registra como venta perdida).
 - **⚙️ Mínimos y alertas** (administrador, en Inventario): define el mínimo de cada producto, el WhatsApp del administrador y la hora de revisión diaria. Al llegar al mínimo: aviso en caja, botón para enviar WhatsApp y notificación en los dispositivos del administrador que la activen.
