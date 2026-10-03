@@ -362,7 +362,7 @@ body.kitchen .ticket ul{font-size:20px}
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-const PRODUCTS=[
+const BASE_PRODUCTS=[
   {id:"ranchera",name:"Ranchera",c:"#D62839",k:"emp"},
   {id:"pork",name:"Pulled Pork",c:"#7B2D26",k:"emp"},
   {id:"hawaiana",name:"Hawaiana",c:"#F2762E",k:"emp"},
@@ -374,12 +374,16 @@ const PRODUCTS=[
   {id:"aguasin",name:"Agua sin gas personal",c:"#5E9CC0",k:"beb"},
   {id:"aguacon",name:"Agua con gas personal",c:"#3F7597",k:"beb"}
 ];
-const EMP=PRODUCTS.filter(p=>p.k==="emp"), BEB=PRODUCTS.filter(p=>p.k==="beb");
+/* Productos: los de fábrica + los que agrega el administrador (config.extra). Los ocultos (config.hidden) no se venden pero conservan su historial. */
+let ALL_PRODUCTS=BASE_PRODUCTS.slice(), PRODUCTS=BASE_PRODUCTS.slice(), EMP=PRODUCTS.filter(p=>p.k==="emp"), BEB=PRODUCTS.filter(p=>p.k==="beb");
+function applyProducts(){const ex=Array.isArray(config.extra)?config.extra:[];const hid=config.hidden||[];
+  ALL_PRODUCTS=[...BASE_PRODUCTS,...ex.filter(x=>x&&x.id&&x.name)];PRODUCTS=ALL_PRODUCTS.filter(p=>!hid.includes(p.id));
+  EMP=PRODUCTS.filter(p=>p.k==="emp");BEB=PRODUCTS.filter(p=>p.k==="beb")}
 const DEFAULT_CONFIG={
   prices:{ranchera:1.5,pork:1.75,hawaiana:1.5,queso:1.25,pollo:1.5,jamaica:1.5,limonada:1.5,coca:1.5,aguasin:1.5,aguacon:1.5},
   costs:{ranchera:.6,pork:.75,hawaiana:.6,queso:.45,pollo:.6,jamaica:.4,limonada:.35,coca:.8,aguasin:.5,aguacon:.6},
   goal:80, staff:[{name:"Administrador",rol:"admin"}], cooks:["Cocinero 1","Cocinero 2"], target:8, stockMax:50,
-  mins:{ranchera:10,pork:10,hawaiana:10,queso:10,pollo:10,jamaica:6,limonada:6,coca:6,aguasin:6,aguacon:6}, alertPhone:"", alertHour:"15:00", comanda:true
+  mins:{ranchera:10,pork:10,hawaiana:10,queso:10,pollo:10,jamaica:6,limonada:6,coca:6,aguasin:6,aguacon:6}, alertPhone:"", alertHour:"15:00", comanda:true, extra:[], hidden:[]
 };
 const LS="empanadictos_v2";
 let config=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
@@ -395,10 +399,10 @@ let db=null, dl=null, loaded=false, seenPending=null;
 let authNeeded=false, authUser=null, authBusy=false;
 
 /* ---------- Almacenamiento ---------- */
-function mergeCfg(c){c=c||{};return{prices:{...DEFAULT_CONFIG.prices,...(c.prices||{})},costs:{...DEFAULT_CONFIG.costs,...(c.costs||{})},goal:Number(c.goal)||DEFAULT_CONFIG.goal,cooks:Array.isArray(c.cooks)&&c.cooks.length?c.cooks:DEFAULT_CONFIG.cooks,staff:Array.isArray(c.staff)&&c.staff.length?c.staff:DEFAULT_CONFIG.staff,target:Number(c.target)||DEFAULT_CONFIG.target,stockMax:Number(c.stockMax)||50,mins:{...DEFAULT_CONFIG.mins,...(c.mins||{})},alertPhone:String(c.alertPhone||""),alertHour:typeof c.alertHour==="string"?c.alertHour:DEFAULT_CONFIG.alertHour,comanda:c.comanda!==false,resetAt:Number(c.resetAt)||0}}
+function mergeCfg(c){c=c||{};return{prices:{...DEFAULT_CONFIG.prices,...(c.prices||{})},costs:{...DEFAULT_CONFIG.costs,...(c.costs||{})},goal:Number(c.goal)||DEFAULT_CONFIG.goal,cooks:Array.isArray(c.cooks)&&c.cooks.length?c.cooks:DEFAULT_CONFIG.cooks,staff:Array.isArray(c.staff)&&c.staff.length?c.staff:DEFAULT_CONFIG.staff,target:Number(c.target)||DEFAULT_CONFIG.target,stockMax:Number(c.stockMax)||50,mins:{...DEFAULT_CONFIG.mins,...(c.mins||{})},alertPhone:String(c.alertPhone||""),alertHour:typeof c.alertHour==="string"?c.alertHour:DEFAULT_CONFIG.alertHour,comanda:c.comanda!==false,resetAt:Number(c.resetAt)||0,extra:Array.isArray(c.extra)?c.extra:[],hidden:Array.isArray(c.hidden)?c.hidden:[]}}
 function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LS)||"null");if(s){config=mergeCfg(s.config);sales=s.sales||[];cierres=s.cierres||{};if(s.inv)inv=s.inv;if(s.claves)claves=s.claves;if(s.turnos)turnos=s.turnos;if(s.cuentas)cuentas=s.cuentas;if(s.perdidas)perdidas=s.perdidas;}}catch(e){}}
 function saveLocal(){if(db)return;try{localStorage.setItem(LS,JSON.stringify({config,sales,cierres,inv,claves,turnos,cuentas,perdidas}))}catch(e){}}
-loadLocal();
+loadLocal();applyProducts();
 window.addEventListener("storage",e=>{if(db||e.key!==LS)return;const pend=seenPending;loadLocal();if(acct&&!cuentas.some(c=>c.id===acct&&c.status==="abierta")){acct=null;charging=false}notifyNew();restoreSession();if(!(tab==="vender"&&document.activeElement&&document.activeElement.tagName==="INPUT"))render()});
 
 /* ---------- Ventas en la nube con copia en el dispositivo ----------
@@ -433,7 +437,7 @@ async function startSalesSync(){
   const since=Math.max(0,(syncMeta.last||0)-15*60000);
   const apply=snap=>{const ch=[];
     snap.docChanges().forEach(x=>{if(x.type==="removed")return;const v={id:x.doc.id,...x.doc.data()};salesAll.set(v.id,v);ch.push(v);syncMeta.last=Math.max(syncMeta.last||0,v.u||0)});
-    if(!ch.length)return;refreshSales();notifyNew();render();cachePut(ch,syncMeta).catch(()=>{})};
+    if(!ch.length)return;refreshSales();notifyNew();softRender();cachePut(ch,syncMeta).catch(()=>{})};
   const fail=()=>{$("#sync").textContent="Sin conexión"};
   db.collection("ventas").where("u",">=",since).onSnapshot(apply,fail);   /* solo lo nuevo o cambiado */
   db.collection("ventas").where("t",">=",dayStart()).onSnapshot(apply,fail); /* respaldo: todo lo de hoy */
@@ -472,8 +476,8 @@ async function startSalesSync(){
     db.doc("tienda/config").onSnapshot(s=>{if(s.exists){config=mergeCfg(s.data());
       /* Si un administrador borró las ventas, este dispositivo descarta su copia y vuelve a descargar */
       if(syncMeta.full&&config.resetAt>syncMeta.full){cacheClear().then(()=>location.reload());return}
-      render()}},()=>{});
-    db.doc("tienda/inventario").onSnapshot(s=>{if(s.exists){const v=s.data();inv={base:{...inv.base,...(v.base||{})},since:v.since||0};render()}},()=>{});
+      softRender()}},()=>{});
+    db.doc("tienda/inventario").onSnapshot(s=>{if(s.exists){const v=s.data();inv={base:{...inv.base,...(v.base||{})},since:v.since||0};softRender()}},()=>{});
     db.collection("perdidas").where("t",">=",dayStart()-62*DAY).orderBy("t","desc").onSnapshot(snap=>{perdidas=snap.docs.map(x=>({id:x.id,...x.data()}));if(role==="ventas"&&tab!=="vender")render()},()=>{});
     db.collection("cuentas").where("tOpen",">=",dayStart()-62*DAY).orderBy("tOpen","desc").onSnapshot(snap=>{cuentas=snap.docs.map(x=>({id:x.id,...x.data()}));if(acct&&!cuentas.some(c=>c.id===acct&&c.status==="abierta")){acct=null;charging=false}if(role==="ventas")render()},()=>{});
     db.collection("turnos").where("tIn",">=",dayStart()-62*DAY).orderBy("tIn","desc").onSnapshot(snap=>{turnos=snap.docs.map(x=>({id:x.id,...x.data()}));if(role&&(tab==="caja"||tab==="analisis"||tab==="cocina"))render()},()=>{});
@@ -592,7 +596,7 @@ async function saveCierre(k,v){if(db)await db.doc("cierres/"+k).set(v);else{cier
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const money=n=>"$"+(Math.round((n||0)*100)/100).toFixed(2);
-const P=id=>PRODUCTS.find(p=>p.id===id)||{name:id,c:"#999",k:"emp"};
+const P=id=>ALL_PRODUCTS.find(p=>p.id===id)||{name:id,c:"#999",k:"emp"};
 const empU=s=>Object.entries(s.items||{}).reduce((a,[f,q])=>a+(P(f).k==="emp"?q:0),0);
 const bebU=s=>Object.entries(s.items||{}).reduce((a,[f,q])=>a+(P(f).k==="beb"?q:0),0);
 const dayStart=(d=new Date())=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()};
@@ -761,7 +765,10 @@ function productionPlan(all){
 }
 
 /* ---------- Render ---------- */
-function render(){
+/* No redibujar Ajustes mientras el administrador escribe (llegan ventas de otros dispositivos) */
+function softRender(){const a=document.activeElement;if(tab==="ajustes"&&role&&((a&&a.closest&&a.closest("#app")&&/INPUT|SELECT|TEXTAREA/.test(a.tagName))||newProdOpen)){applyProducts();return}render()}
+document.addEventListener("toggle",e=>{if(e.target.matches&&e.target.matches("details")&&e.target.querySelector("#addProd"))newProdOpen=e.target.open},true);
+function render(){applyProducts();
   const lo=$("#logout");document.body.classList.toggle("kitchen",role==="cocina");
   if(authNeeded&&!authUser){$("#nav").hidden=true;$("#paybar").hidden=true;lo.hidden=true;renderAuth();return}
   if(role)checkLowAlerts();
@@ -895,7 +902,7 @@ function renderKitchen(){
 }
 
 /* Inventario */
-let showMins=false;
+let showMins=false, newProdOpen=false;
 function invCard(p,today,plan){const s=stock(p.id);const m=minOf(p.id);const cls=s===0?"zero":s<=m?"low":"ok";const pl=plan&&plan.find(x=>x.id===p.id);const avg=pl?pl.q/1.1:0;const lost=lostBy(dayStart(),Infinity)[p.id]||0;
   return `<div class="invc" style="--c:${p.c}">
     <div class="row"><div><div style="font-weight:800">${p.name}</div><div class="big">${s}</div><small class="m">mínimo ${m} · hoy vendidas ${today.by[p.id]||0}</small>${lost?`<br><span class="lost">🚫 ${lost} pedidos perdidos hoy por falta de stock</span>`:""}</div>
@@ -928,7 +935,7 @@ function renderInv(){
     <p class="sub" style="margin-top:12px">"Sumar" agrega lo que acabas de hornear o comprar. "Ajustar" pone el número exacto que contaste.</p>`;
 }
 async function setStock(changes){
-  const base={};PRODUCTS.forEach(p=>base[p.id]=stock(p.id));Object.assign(base,changes);
+  const base={};ALL_PRODUCTS.forEach(p=>base[p.id]=stock(p.id));Object.assign(base,changes);
   inv={base,since:Date.now()};await saveInv();
 }
 
@@ -1148,7 +1155,7 @@ async function driveExport(btn){
     const estado=v=>v.void?"Anulado":v.paid===false?"Por cobrar":"Pagado";
     const vRows=ventas.map(v=>({"Fecha":dkey(v.t),"Hora":hora(v.t),"Pedido":v.num||"","Cliente o mesa":v.client||"",
       "Productos":Object.entries(v.items||{}).map(([f,c])=>c+" "+P(f).name).join(", "),
-      ...Object.fromEntries(PRODUCTS.map(p=>[p.name,(v.items||{})[p.id]||0])),
+      ...Object.fromEntries(ALL_PRODUCTS.filter(p=>PRODUCTS.includes(p)||ventas.some(x=>(x.items||{})[p.id])).map(p=>[p.name,(v.items||{})[p.id]||0])),
       "Empanadas":empU(v),"Bebidas":bebU(v),"Total":r2(v.total),"Pago":v.pay||"","Estado":estado(v),
       "Cobró":v.paidBy||v.cashier||"","Cocinero":v.cook||"","Motivo anulación":v.voidReason||""}));
     const days={};ventas.forEach(v=>{const k=dkey(v.paid===false?v.t:payT(v));const d=days[k]||(days[k]={"Fecha":k,"Pedidos":0,"Empanadas":0,"Bebidas":0,"Efectivo":0,"Transferencia":0,"Total vendido":0,"Costo":0,"Ganancia":0,"Anulados":0,"Por cobrar":0});
@@ -1161,7 +1168,7 @@ async function driveExport(btn){
       "Estado":st===0?"Agotado":st<=m?"Bajo el mínimo":"Bien","Vendidas hoy":hoy.by[p.id]||0,"Precio":config.prices[p.id],"Costo":config.costs[p.id],"Valor en inventario (costo)":r2(st*(config.costs[p.id]||0))}});
     const wb=XLSX.utils.book_new();
     const add=(rows,name,widths)=>{const ws=XLSX.utils.json_to_sheet(rows.length?rows:[{"Sin datos":""}]);ws["!cols"]=widths.map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,name)};
-    add(vRows,"Ventas",[11,7,7,16,40,...PRODUCTS.map(()=>9),10,8,8,13,11,12,12,22]);
+    add(vRows,"Ventas",[11,7,7,16,40,...ALL_PRODUCTS.map(()=>9),10,8,8,13,11,12,12,22]);
     add(dRows,"Resumen por día",[11,8,10,8,10,13,13,9,10,9,10]);
     add(iRows,"Inventario",[16,10,10,8,15,12,8,8,24]);
     const stamp=dkey(Date.now());const name=`Empanadictos ventas e inventario ${stamp}.xlsx`;
@@ -1268,6 +1275,16 @@ function renderSettings(){
       <details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Copia técnica para restaurar la app</summary><p class="sub" style="margin:8px 0">Archivo .json con todo (cuentas, turnos, cierres, configuración). No se abre en Excel: solo sirve para recuperar la app si algo falla.</p>
       <button class="btn" style="width:100%" id="bkJson">Descargar copia técnica (.json)</button>${db?"":`<label class="btn" style="display:block;text-align:center;cursor:pointer;margin-top:10px">Restaurar un respaldo<input type="file" id="restore" accept=".json,application/json" hidden></label>`}</details></div>
     ${authUser?`<div class="card"><h3>🔒 Seguridad</h3><p class="sub" style="margin:0 0 10px">Este dispositivo está conectado como <b>${esc(authUser.email)}</b>. Si pierdes o cambias un dispositivo, cambia la contraseña en Firebase.</p><button class="btn danger" id="authOut">Cerrar sesión de este dispositivo</button></div>`:""}
+    <div class="card"><h3>🥟 Productos</h3><p class="sub" style="margin:0 0 10px">Agrega productos nuevos u oculta los que ya no vendes (su historial se conserva). Las empanadas van a Cocina; las bebidas y otros no.</p>
+      <div class="list" style="margin-bottom:12px">${ALL_PRODUCTS.map(p=>{const off=config.hidden.includes(p.id);return `<div class="sale" style="align-items:center"><span class="what" style="${off?"opacity:.5":""}"><b style="color:${p.c}">●</b> <b>${esc(p.name)}</b><br><small class="m">${p.k==="emp"?"Empanada":"Bebida u otro"} · ${money(config.prices[p.id]||0)}${off?" · oculto":""}</small></span><button class="btn sm ${off?"primary":""}" data-phide="${p.id}">${off?"Mostrar":"Ocultar"}</button></div>`}).join("")}</div>
+      <details ${newProdOpen?"open":""}><summary class="btn" style="display:block;text-align:center;cursor:pointer;list-style:none">+ Agregar producto</summary>
+        <div style="margin-top:12px"><label class="f" for="npName">Nombre</label><input class="inp" id="npName" maxlength="30" placeholder="Ej. Empanada de carne" autocomplete="off">
+        <label class="f" for="npKind" style="margin-top:10px">Tipo</label><select class="inp" id="npKind"><option value="emp">Empanada (va a cocina)</option><option value="beb">Bebida u otro (no va a cocina)</option></select>
+        <div class="row2" style="margin-top:10px"><div><label class="f" for="npPrice">Precio $</label><input class="inp" id="npPrice" type="number" step="0.05" min="0" inputmode="decimal" placeholder="1.50"></div>
+        <div><label class="f" for="npCost">Costo $</label><input class="inp" id="npCost" type="number" step="0.05" min="0" inputmode="decimal" placeholder="0.60"></div></div>
+        <div class="row2" style="margin-top:10px"><div><label class="f" for="npStock">Cantidad inicial</label><input class="inp" id="npStock" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+        <div><label class="f" for="npColor">Color</label><input class="inp" id="npColor" type="color" value="#C2410C" style="height:48px;padding:4px"></div></div>
+        <button class="btn primary" style="width:100%;margin-top:12px" id="addProd">Agregar producto</button></div></details></div>
     <div class="card"><h3>Precios y costos</h3><p class="sub" style="margin:0 0 6px">El costo sirve para calcular la ganancia estimada.</p>
       <div class="frow head"><span>Producto</span><span>Precio $</span><span>Costo $</span></div>
       ${PRODUCTS.map(f=>`<div class="frow"><span style="font-weight:700">${f.name}</span>
@@ -1469,6 +1486,23 @@ document.addEventListener("click",async ev=>{
   if(b.id==="demoOn"){demo=true;demoSales=null;demoShifts=null;renderAnalysis();return}
   if(b.id==="demoOff"){demo=false;renderAnalysis();return}
   if(b.id==="demoToggle"){demo=!demo;demoSales=null;demoShifts=null;tab="analisis";render();return}
+  if(b.id==="addProd"){if(!isAdmin())return;
+    const name=($("#npName").value||"").trim().slice(0,30);const price=parseFloat($("#npPrice").value);const cost=parseFloat($("#npCost").value)||0;
+    const k=$("#npKind").value==="beb"?"beb":"emp";const qty=Math.max(0,parseInt($("#npStock").value,10)||0);const c=$("#npColor").value||"#C2410C";
+    if(!name){toast("Escribe el nombre del producto",true);return}
+    if(!(price>0)){toast("Escribe el precio",true);return}
+    if(ALL_PRODUCTS.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast("Ya existe un producto con ese nombre",true);return}
+    const id="p_"+name.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g,"").slice(0,12)+"_"+Date.now().toString(36).slice(-4);
+    b.disabled=true;
+    config.extra=[...(config.extra||[]),{id,name,c,k}];config.prices[id]=Math.round(price*100)/100;config.costs[id]=Math.round(cost*100)/100;config.mins[id]=k==="emp"?10:6;applyProducts();
+    try{await saveConfig();await setStock({[id]:qty});newProdOpen=false;toast(`${name} agregado`)}catch(e){toast("No se pudo guardar",true)}
+    render();return}
+  if(b.dataset.phide){if(!isAdmin())return;const id=b.dataset.phide;const off=config.hidden.includes(id);
+    if(!off&&PRODUCTS.length<=1){toast("Debe quedar al menos un producto",true);return}
+    if(!off&&Object.keys(cart).includes(id))delete cart[id];
+    config.hidden=off?config.hidden.filter(x=>x!==id):[...config.hidden,id];applyProducts();
+    try{await saveConfig();toast(`${P(id).name} ${off?"visible otra vez":"oculto"}`)}catch(e){toast("No se pudo guardar",true)}
+    render();return}
   if(b.id==="saveCfg"){if(!isAdmin()){toast("Solo un administrador puede hacer esto",true);return}
     document.querySelectorAll("[data-price]").forEach(i=>config.prices[i.dataset.price]=Math.max(0,parseFloat(i.value)||0));
     document.querySelectorAll("[data-cost]").forEach(i=>config.costs[i.dataset.cost]=Math.max(0,parseFloat(i.value)||0));
