@@ -1098,6 +1098,48 @@ function lastBackupTxt(){let t=0;try{t=Number(localStorage.getItem("emp_lastback
 async function allDocs(col,local){
   if(!db)return local;
   const snap=await db.collection(col).get();return snap.docs.map(x=>({id:x.id,...x.data()}))}
+async function xlsxLib(){if(window.XLSX)return;try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js")}catch(e){await loadScript("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js")}}
+/* Un solo archivo Excel (Ventas, Resumen por día, Inventario) para guardar en Google Drive */
+async function driveExport(btn){
+  btn.disabled=true;const old=btn.textContent;btn.textContent="Preparando archivo…";
+  try{
+    await xlsxLib();
+    const ventas=(await allDocs("ventas",sales)).sort((a,b)=>a.t-b.t);
+    const r2=v=>Math.round((v||0)*100)/100;
+    const hora=t=>new Date(t).toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"});
+    const estado=v=>v.void?"Anulado":v.paid===false?"Por cobrar":"Pagado";
+    const vRows=ventas.map(v=>({"Fecha":dkey(v.t),"Hora":hora(v.t),"Pedido":v.num||"","Cliente o mesa":v.client||"",
+      "Productos":Object.entries(v.items||{}).map(([f,c])=>c+" "+P(f).name).join(", "),
+      ...Object.fromEntries(PRODUCTS.map(p=>[p.name,(v.items||{})[p.id]||0])),
+      "Empanadas":empU(v),"Bebidas":bebU(v),"Total":r2(v.total),"Pago":v.pay||"","Estado":estado(v),
+      "Cobró":v.paidBy||v.cashier||"","Cocinero":v.cook||"","Motivo anulación":v.voidReason||""}));
+    const days={};ventas.forEach(v=>{const k=dkey(v.paid===false?v.t:payT(v));const d=days[k]||(days[k]={"Fecha":k,"Pedidos":0,"Empanadas":0,"Bebidas":0,"Efectivo":0,"Transferencia":0,"Total vendido":0,"Costo":0,"Ganancia":0,"Anulados":0,"Por cobrar":0});
+      if(v.void){d["Anulados"]+=r2(v.total);return}if(v.paid===false){d["Por cobrar"]+=r2(v.total);return}
+      const cost=Object.entries(v.items||{}).reduce((a,[f,q])=>a+q*(config.costs[f]||0),0);
+      d["Pedidos"]++;d["Empanadas"]+=empU(v);d["Bebidas"]+=bebU(v);d[v.pay==="efectivo"?"Efectivo":"Transferencia"]+=v.total;d["Total vendido"]+=v.total;d["Costo"]+=cost});
+    const dRows=Object.values(days).sort((a,b)=>a.Fecha<b.Fecha?-1:1).map(d=>{d["Ganancia"]=d["Total vendido"]-d["Costo"];for(const k in d)if(typeof d[k]==="number"&&k!=="Pedidos")d[k]=r2(d[k]);return d});
+    const hoy=stats(sales.filter(s=>s.t>=dayStart()&&!s.void));
+    const iRows=PRODUCTS.map(p=>{const st=stock(p.id),m=minOf(p.id);return{"Producto":p.name,"Tipo":p.k==="emp"?"Empanada":"Bebida","Existencia":st,"Mínimo":m,
+      "Estado":st===0?"Agotado":st<=m?"Bajo el mínimo":"Bien","Vendidas hoy":hoy.by[p.id]||0,"Precio":config.prices[p.id],"Costo":config.costs[p.id],"Valor en inventario (costo)":r2(st*(config.costs[p.id]||0))}});
+    const wb=XLSX.utils.book_new();
+    const add=(rows,name,widths)=>{const ws=XLSX.utils.json_to_sheet(rows.length?rows:[{"Sin datos":""}]);ws["!cols"]=widths.map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,name)};
+    add(vRows,"Ventas",[11,7,7,16,40,...PRODUCTS.map(()=>9),10,8,8,13,11,12,12,22]);
+    add(dRows,"Resumen por día",[11,8,10,8,10,13,13,9,10,9,10]);
+    add(iRows,"Inventario",[16,10,10,8,15,12,8,8,24]);
+    const stamp=dkey(Date.now());const name=`Empanadictos ventas e inventario ${stamp}.xlsx`;
+    const mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    const blob=new Blob([XLSX.write(wb,{bookType:"xlsx",type:"array"})],{type:mime});
+    let shared=false;
+    try{const file=new File([blob],name,{type:mime});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});shared=true}}
+    catch(e){if(e&&e.name==="AbortError"){btn.disabled=false;btn.textContent=old;return}}
+    if(!shared){await download(name,blob,mime);toast("Archivo descargado. Súbelo a drive.google.com (Nuevo → Subir archivo).")}
+    else toast("Listo: elige Drive para guardarlo");
+    try{localStorage.setItem("emp_lastbackup",String(Date.now()))}catch(e){}
+    if(tab==="ajustes")render();
+  }catch(e){toast("No se pudo crear el archivo. Revisa tu conexión e intenta de nuevo.",true)}
+  btn.disabled=false;btn.textContent=old;
+}
 async function makeBackup(kind,btn){
   btn.disabled=true;const old=btn.textContent;btn.textContent="Preparando…";
   try{
@@ -1183,6 +1225,8 @@ function renderAnalysis(){
 function renderSettings(){
   $("#app").innerHTML=`
     <h2>Ajustes</h2>
+    <div class="card"><h3>📁 Google Drive</h3><p class="sub" style="margin:0 0 10px">Crea <b>un solo archivo Excel</b> con tres hojas: <b>Ventas</b> (todas, con detalle por producto), <b>Resumen por día</b> e <b>Inventario</b> actual. En el celular se abre el menú de compartir: elige <b>Drive</b> y guárdalo en tu carpeta. En computadora se descarga para subirlo a Drive.</p>
+      <button class="btn primary" style="width:100%" id="driveXls">📁 Guardar ventas e inventario en Drive</button></div>
     <div class="card"><h3>💾 Respaldo</h3><p class="sub" style="margin:0 0 10px">Guarda una copia de todas las ventas, cuentas, turnos, cierres e inventario. Hazlo al menos una vez por semana y guárdala en tu correo o en Drive.<br><b>Último respaldo en este dispositivo:</b> ${lastBackupTxt()}</p>
       <div class="row2"><button class="btn primary" id="bkJson">Respaldo completo</button><button class="btn" id="bkCsv">Ventas para Excel</button></div>${db?"":`<label class="btn" style="display:block;text-align:center;cursor:pointer;margin-top:10px">Restaurar un respaldo<input type="file" id="restore" accept=".json,application/json" hidden></label>`}</div>
     ${authUser?`<div class="card"><h3>🔒 Seguridad</h3><p class="sub" style="margin:0 0 10px">Este dispositivo está conectado como <b>${esc(authUser.email)}</b>. Si pierdes o cambias un dispositivo, cambia la contraseña en Firebase.</p><button class="btn danger" id="authOut">Cerrar sesión de este dispositivo</button></div>`:""}
@@ -1257,6 +1301,7 @@ document.addEventListener("click",async ev=>{
   if(b.id==="saveMins"){if(!isAdmin())return;const mins={};document.querySelectorAll("[data-min]").forEach(i=>{mins[i.dataset.min]=Math.max(0,parseInt(i.value,10)||0)});
     config.mins={...config.mins,...mins};config.alertPhone=$("#alertPhone").value.trim().slice(0,20);config.alertHour=$("#alertHour").value||"";
     try{await saveConfig();lastLows=null;checkLowAlerts();toast("Mínimos y alertas guardados")}catch(e){toast("No se pudo guardar",true)}showMins=false;render();return}
+  if(b.id==="driveXls"){if(!isAdmin())return;driveExport(b);return}
   if(b.id==="bkJson"){makeBackup("json",b);return}
   if(b.id==="bkCsv"){makeBackup("csv",b);return}
   if(b.id==="authEnter"){authLogin();return}
